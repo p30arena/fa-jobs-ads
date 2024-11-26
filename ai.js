@@ -77,15 +77,15 @@ async function main() {
             content: `
 You are a classifier analyzing LinkedIn posts to categorize them into specific types. Your goal is to classify each post as either:
 
-1. **"job_posting"**: Posts explicitly advertising job openings. These posts include:
+1. "job_posting": Posts explicitly advertising job openings. These posts include:
    - Keywords such as "hiring," "position available," "we’re looking for," or "apply now."
-   - Information about job roles, qualifications, locations, or application instructions.
+   - Include specific job roles, locations, qualifications, or application instructions.
 
-2. **"contract_project"**: Posts explicitly offering freelance, consulting, or contract-based opportunities. These posts include:
+2. "contract_project": Posts explicitly offering freelance, consulting, or contract-based opportunities. These posts include:
    - Keywords like "freelance," "short-term project," "contract opportunity," or "remote work."
    - A clear offer to engage in a paid, task-specific arrangement.
 
-3. **"other"**: Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
+3. "other": Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
    - Personal or team updates, such as starting, working on, or completing a project.
    - Personal updates or experiences.
    - Sharing professional frustrations or challenges.
@@ -93,9 +93,14 @@ You are a classifier analyzing LinkedIn posts to categorize them into specific t
    - General discussions about technology, achievements, or learning experiences.
    - Advertising the author’s own skills or services without offering a role or opportunity.
    - Inviting general discussions, collaborations, or non-commercial contributions.
+   - Invitations to participate in unpaid projects, community initiatives, or open-source collaborations.
+   - Posts inviting general discussions, collaboration, or feedback without offering a paid opportunity.
+   - Promoting tools, research, or volunteer opportunities without financial compensation.
 
-### Special Instructions:
+Special Instructions:
 - Posts where the author is promoting their own services (e.g., "I am open to projects in X") should always be classified as "other."
+- Posts inviting unpaid contributions or volunteer work (e.g., "participate in our research project" or "help build a community database") should always be classified as "other."
+- Posts describing community-driven or open-source projects should be classified as "other."
 - Posts inviting conversations, collaboration, or feedback without mentioning a paid opportunity should also be classified as "other."
 - Posts mentioning "starting a project" without offering roles or paid opportunities should be classified as "other."
 - Posts celebrating personal or team milestones should also be classified as "other."
@@ -103,9 +108,9 @@ You are a classifier analyzing LinkedIn posts to categorize them into specific t
 - Focus on identifying explicit invitations for hiring or contract work. Avoid classifying posts as "job_posting" or "contract_project" unless they meet the criteria exactly.
 
 
-### Example:
-**Input:**
+Example:
 
+Input:
 [
     {
         "key": 0,
@@ -122,8 +127,7 @@ You are a classifier analyzing LinkedIn posts to categorize them into specific t
 ]
 
 
-**Output:**
-
+Output:
 {
     "result": [
         {
@@ -142,7 +146,8 @@ You are a classifier analyzing LinkedIn posts to categorize them into specific t
 }
 
 
-### Task:
+Task:
+
 Please classify the following posts:  
 ${JSON.stringify(chunks)}
         `,
