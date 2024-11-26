@@ -7,7 +7,7 @@ const zTxtAnalysisResponse = z.object({
   result: z.array(
     z.object({
       key: z.number(),
-      lead: z.boolean(),
+      send_quote: z.boolean(),
     })
   ),
 });
@@ -44,18 +44,18 @@ async function main() {
           {
             role: "system",
             content: `
-We are a Software Development Company, You are a helpful Project Analyzer.
-You must indentify leads so we can send them a quote.
+We are a Software Development Company, You are a helpful Content Analyzer.
+You must indentify projects so we can send them a quote.
 
-You are provided with posts from LinkedIn, post content is in the "text" field.
+Post content is in the "text" field.
+For each post:
+ - extend the post with the key "send_quote".
+ - set "send_quote" to true if the post is recruiting people or is proposing a project that is explicitly seeking for contractors,
+   and the post is not asking for donations or payments or registration for receiving services.
 
-Think Step by Step.
+result must only include the posts that their "send_quote" is true.
 
-Determine the intent of each post.
-For each post, if the post is recruiting people or is proposing a project that is explicitly seeking for contractors, set "lead" to true.
-For each post, if the post is asking for donations, registration or payment, set "lead" to false.
-
-result must only include the posts that are labeled as "lead".
+Process the following array of LinkedIn post items:
         `,
           },
           { role: "user", content: JSON.stringify(chunks) },
@@ -68,8 +68,8 @@ result must only include the posts that are labeled as "lead".
       chunks = [];
 
       if (res.choices.length) {
-        for (const { key, lead } of res.choices[0].message.parsed.result) {
-          if (lead) {
+        for (const { key, send_quote } of res.choices[0].message.parsed.result) {
+          if (send_quote) {
             console.log(data[key].time);
             console.log(data[key].profile_link);
             console.log(data[key].text);
