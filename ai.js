@@ -16,6 +16,34 @@ const txtAnalysisResponseFormat = zodResponseFormat(
   zTxtAnalysisResponse,
   "TxtAnalysis"
 );
+let timeUnits = {
+  second: 1000,
+  minute: 60 * 1000,
+  hour: 60 * 60 * 1000,
+  day: 24 * 60 * 60 * 1000,
+  week: 7 * 24 * 60 * 60 * 1000,
+  month: 30 * 24 * 60 * 60 * 1000, // Approximate month length
+  year: 365 * 24 * 60 * 60 * 1000,
+};
+timeUnits = Object.fromEntries([
+  ...Object.entries(timeUnits),
+  ...Object.entries(timeUnits).map(([k, v]) => [k + "s", v]),
+]);
+
+function parseTimeAgo(timeAgoStr) {
+  const match = timeAgoStr.match(/(\d+) (\w+) ago/);
+  if (!match) {
+    throw new Error("Invalid time ago string format");
+  }
+
+  const [_, number, unit] = match;
+
+  const timeDiff = Number(number) * timeUnits[unit.toLowerCase()];
+  const now = new Date();
+  const pastTime = new Date(now.getTime() - timeDiff);
+
+  return pastTime;
+}
 
 async function main() {
   const MAX_TOKENS = 128_000;
@@ -27,7 +55,9 @@ async function main() {
   )
     .split("\n")
     .filter((it) => it)
-    .map((it, i) => ({ ...JSON.parse(it), key: i }));
+    .map((it, i) => ({ ...JSON.parse(it), key: i }))
+    .map((it) => ({ ...it, time: parseTimeAgo(it["time"]) }));
+  // .filter((it) => Date.now() - it["time"].getTime() < 2 * timeUnits["week"]);
 
   let chunks = [];
   let cnt = 0;
@@ -68,7 +98,8 @@ Process the following array of LinkedIn post items:
       chunks = [];
 
       if (res.choices.length) {
-        for (const { key, send_quote } of res.choices[0].message.parsed.result) {
+        for (const { key, send_quote } of res.choices[0].message.parsed
+          .result) {
           if (send_quote) {
             console.log(data[key].time);
             console.log(data[key].profile_link);
