@@ -87,13 +87,20 @@ You are a classifier analyzing LinkedIn posts to categorize them into specific t
 
 3. **"other"**: Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
    - Personal or team updates, such as starting, working on, or completing a project.
+   - Personal updates or experiences.
+   - Sharing professional frustrations or challenges.
    - Posts sharing tools, tutorials, or non-commercial initiatives.
    - General discussions about technology, achievements, or learning experiences.
+   - Advertising the author’s own skills or services without offering a role or opportunity.
+   - Inviting general discussions, collaborations, or non-commercial contributions.
 
 ### Special Instructions:
+- Posts where the author is promoting their own services (e.g., "I am open to projects in X") should always be classified as "other."
+- Posts inviting conversations, collaboration, or feedback without mentioning a paid opportunity should also be classified as "other."
 - Posts mentioning "starting a project" without offering roles or paid opportunities should be classified as "other."
 - Posts celebrating personal or team milestones should also be classified as "other."
 - Avoid classifying any post as "job_posting" or "contract_project" unless there is a clear invitation for hiring or paid engagement.
+- Focus on identifying explicit invitations for hiring or contract work. Avoid classifying posts as "job_posting" or "contract_project" unless they meet the criteria exactly.
 
 
 ### Example:
