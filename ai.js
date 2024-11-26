@@ -75,51 +75,25 @@ async function main() {
           {
             role: "system",
             content: `
-You are an assistant designed to classify LinkedIn posts based on their content. Your task is to analyze the provided JSON array and classify each post into one of the following categories:
+You are a classifier analyzing LinkedIn posts to categorize them into specific types. Your goal is to classify each post as either:
 
-1. **"job_posting"**: Posts that explicitly advertise job openings or hiring opportunities.
-2. **"contract_project"**: Posts offering freelance, consulting, or short-term contract work.
-3. **"other"**: Posts that do not fit into either of the above categories.
+1. **"job_posting"**: Posts explicitly advertising job openings. These posts include:
+   - Keywords such as "hiring," "position available," "we’re looking for," or "apply now."
+   - Information about job roles, qualifications, locations, or application instructions.
 
-### Input:
-You will receive a JSON array of objects. Each object has the following structure:
+2. **"contract_project"**: Posts explicitly offering freelance, consulting, or contract-based opportunities. These posts include:
+   - Keywords like "freelance," "short-term project," "contract opportunity," or "remote work."
+   - A clear offer to engage in a paid, task-specific arrangement.
 
-[
-    {
-        "key": 0,
-        "text": "LinkedIn post text here..."
-    },
-    {
-        "key": 1,
-        "text": "Another LinkedIn post text here..."
-    }
-]
+3. **"other"**: Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
+   - Personal or team updates, such as starting, working on, or completing a project.
+   - Posts sharing tools, tutorials, or non-commercial initiatives.
+   - General discussions about technology, achievements, or learning experiences.
 
-
-### Output:
-Return a JSON object with the following structure:
-
-{
-    "result": [
-        {
-            "key": 0,
-            "post_type": "job_posting"
-        },
-        {
-            "key": 1,
-            "post_type": "other"
-        }
-    ]
-}
-
-
-### Instructions:
-1. Analyze the "text" field in each object, primary language of "text" is Farsi.
-2. Classify the post as one of the following:
-   - **"job_posting"**: Indicates hiring, mentions positions, roles, or recruitment terms like "apply," "hiring," or "position available."
-   - **"contract_project"**: Indicates project-based work, freelance, or consulting opportunities, using terms like "contract," "freelance," "short-term," or "project-based."
-   - **"other"**: Does not relate to job opportunities or contracts.
-3. Output a single JSON object containing the classification results.
+### Special Instructions:
+- Posts mentioning "starting a project" without offering roles or paid opportunities should be classified as "other."
+- Posts celebrating personal or team milestones should also be classified as "other."
+- Avoid classifying any post as "job_posting" or "contract_project" unless there is a clear invitation for hiring or paid engagement.
 
 
 ### Example:
