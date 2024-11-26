@@ -7,7 +7,7 @@ const zTxtAnalysisResponse = z.object({
   result: z.array(
     z.object({
       key: z.number(),
-      send_quote: z.boolean(),
+      post_type: z.enum(["job_posting", "contract_project", "other"]),
     })
   ),
 });
@@ -56,7 +56,8 @@ async function main() {
     .split("\n")
     .filter((it) => it)
     .map((it, i) => ({ ...JSON.parse(it), key: i }))
-    .map((it) => ({ ...it, time: parseTimeAgo(it["time"]) }));
+    .map((it) => ({ ...it, time: parseTimeAgo(it["time"]) }))
+    .map((it) => ({ ...it, excerpt: it["text"].slice(0, 500) }));
   // .filter((it) => Date.now() - it["time"].getTime() < 2 * timeUnits["week"]);
 
   let chunks = [];
@@ -64,7 +65,7 @@ async function main() {
   let i = 0;
 
   for (const item of data) {
-    chunks.push({ key: item.key, text: item.text });
+    chunks.push({ key: item.key, text: item.excerpt });
     cnt += item.text.length;
     i++;
 
@@ -74,21 +75,97 @@ async function main() {
           {
             role: "system",
             content: `
-We are a Software Development Company, You are a helpful Content Analyzer.
-You must indentify projects so we can send them a quote.
+You are an assistant designed to classify LinkedIn posts based on their content. Your task is to analyze the provided JSON array and classify each post into one of the following categories:
 
-Post content is in the "text" field.
-For each post:
- - extend the post with the key "send_quote".
- - set "send_quote" to true if the post is recruiting people or is proposing a project that is explicitly seeking for contractors,
-   and the post is not asking for donations or payments or registration for receiving services.
+1. **"job_posting"**: Posts that explicitly advertise job openings or hiring opportunities.
+2. **"contract_project"**: Posts offering freelance, consulting, or short-term contract work.
+3. **"other"**: Posts that do not fit into either of the above categories.
 
-result must only include the posts that their "send_quote" is true.
+### Input:
+You will receive a JSON array of objects. Each object has the following structure:
 
-Process the following array of LinkedIn post items:
+[
+    {
+        "key": 0,
+        "text": "LinkedIn post text here..."
+    },
+    {
+        "key": 1,
+        "text": "Another LinkedIn post text here..."
+    }
+]
+
+
+### Output:
+Return a JSON object with the following structure:
+
+{
+    "result": [
+        {
+            "key": 0,
+            "post_type": "job_posting"
+        },
+        {
+            "key": 1,
+            "post_type": "other"
+        }
+    ]
+}
+
+
+### Instructions:
+1. Analyze the "text" field in each object, primary language of "text" is Farsi.
+2. Classify the post as one of the following:
+   - **"job_posting"**: Indicates hiring, mentions positions, roles, or recruitment terms like "apply," "hiring," or "position available."
+   - **"contract_project"**: Indicates project-based work, freelance, or consulting opportunities, using terms like "contract," "freelance," "short-term," or "project-based."
+   - **"other"**: Does not relate to job opportunities or contracts.
+3. Output a single JSON object containing the classification results.
+
+
+### Example:
+**Input:**
+
+[
+    {
+        "key": 0,
+        "text": "We're hiring a software engineer to join our team in San Francisco. Apply now!"
+    },
+    {
+        "key": 1,
+        "text": "Looking for a freelancer to help with a short-term mobile app development project. Remote work."
+    },
+    {
+        "key": 2,
+        "text": "Excited to share my thoughts on leadership in the tech industry."
+    }
+]
+
+
+**Output:**
+
+{
+    "result": [
+        {
+            "key": 0,
+            "post_type": "job_posting"
+        },
+        {
+            "key": 1,
+            "post_type": "contract_project"
+        },
+        {
+            "key": 2,
+            "post_type": "other"
+        }
+    ]
+}
+
+
+### Task:
+Please classify the following posts:  
+${JSON.stringify(chunks)}
         `,
           },
-          { role: "user", content: JSON.stringify(chunks) },
         ],
         model: "gpt-4o-mini",
         temperature: 0,
@@ -98,9 +175,8 @@ Process the following array of LinkedIn post items:
       chunks = [];
 
       if (res.choices.length) {
-        for (const { key, send_quote } of res.choices[0].message.parsed
-          .result) {
-          if (send_quote) {
+        for (const { key, post_type } of res.choices[0].message.parsed.result) {
+          if (["job_posting", "contract_project"].indexOf(post_type) > -1) {
             console.log(data[key].time);
             console.log(data[key].profile_link);
             console.log(data[key].text);
