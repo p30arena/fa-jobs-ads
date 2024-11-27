@@ -4,6 +4,7 @@
     "version": "1.0",
     "description": "Executes a function on page load for a specific URL",
     "permissions": [
+        "alarms",
         "activeTab",
         "tabs",
         "scripting"

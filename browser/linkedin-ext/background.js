@@ -1,12 +1,22 @@
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (
     tab.active &&
-    tab.status == "complete" &&
-    tab.url.includes("linkedin.com")
+    tab.status == "loading" &&
+    tab.url.includes("linkedin.com/notifications")
   ) {
     chrome.scripting.executeScript({
       target: { tabId: tabId },
       files: ["content.js"],
     });
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "delay") {
+    setTimeout(() => {
+      sendResponse({ status: "OK" });
+    }, message.ms);
+
+    return true; // Indicates the response will be sent asynchronously
   }
 });

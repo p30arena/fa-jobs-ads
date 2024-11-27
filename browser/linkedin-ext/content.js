@@ -1,23 +1,30 @@
 function bilbil_log(...args) {
-  statusElement.value +=
+  const item = document.createElement("span");
+  item.innerHTML =
+    '<span style="font-size: 14px; color: #9E9E9E;">' +
+    new Date().toISOString() +
+    "</span>" +
+    "<br>" +
+    "<span>" +
     args.map((it) => (typeof it === "string" ? it : it.toString())).join(" ") +
-    "\n";
+    "</span>" +
+    "<br>";
+
+  statusElement.appendChild(item);
+
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
 }
 
 function bilbil_error(...args) {
-  statusElement.value +=
-    args.map((it) => (typeof it === "string" ? it : it.toString())).join(" ") +
-    "\n";
-  setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
+  bilbil_log(...args);
 }
 
 function bilbil_clear() {
-  statusElement.value = "";
+  statusElement.innerHTML = "";
   setTimeout(() => statusElement.scrollTo(0, 0), 0);
 }
 
-function prompt_ai(api_key, data) {
+async function prompt_ai(api_key, data) {
   if (!api_key) return new Promise((s, f) => f("api_key"));
 
   return fetch("https://api.openai.com/v1/chat/completions", {
@@ -164,19 +171,10 @@ function zip(...arrays) {
 }
 
 async function delay(ms) {
-  return new Promise((success, _) => {
-    let fired = false;
-    setTimeout(() => {
-      fired = true;
-      success();
-    }, ms);
-
-    // in case browser ignores the timeout!
-    setTimeout(() => {
-      if (!fired) {
-        success();
-      }
-    }, ms + 1000);
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: "delay", ms }, (response) => {
+      resolve();
+    });
   });
 }
 
@@ -194,7 +192,7 @@ function prepare() {
   ifr.style =
     "visibility: hidden; position: absolute; top: 0; left: 0; z-index: -1;";
   statusElement.style =
-    "width: 500px; height: 500px; position: absolute; top: 0; left: 0; z-index: 999; background-color: #ffffffee;";
+    "width: 500px; height: 500px; position: absolute; top: 0; left: 0; z-index: 999; background-color: #ffffffee; overflow: scroll;";
 }
 
 async function search(terms) {
@@ -211,9 +209,14 @@ async function search(terms) {
             return; // false load event
           }
 
+          bilbil_log(ifr.contentDocument.readyState);
+
+          const style = ifr.contentDocument.createElement("style");
+          style.textContent = "img, video, audio {display: none !important;}";
+          ifr.contentDocument.head.appendChild(style);
+
           try {
             const MAX_DEPTH = 3;
-            bilbil_log("loaded");
 
             const moreBtn = () =>
               ifr.contentDocument.querySelector(
@@ -380,7 +383,7 @@ async function search_loop(terms) {
 }
 
 (() => {
-  let statusElement = document.createElement("textarea");
+  let statusElement = document.createElement("div");
   let ifr = document.createElement("iframe");
 
   window.statusElement = statusElement;
