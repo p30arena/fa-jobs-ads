@@ -25,6 +25,8 @@ function bilbil_clear() {
 }
 
 async function prompt_ai(api_key, data) {
+  if (!data.length) return [];
+
   const MAX_TOKENS = 128_000;
   data = data.map((it, i) => ({
     ...it,
