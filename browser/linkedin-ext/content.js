@@ -46,6 +46,7 @@ You are a classifier analyzing LinkedIn posts to categorize them into specific t
   - A clear offer to engage in a paid, task-specific arrangement.
 
 3. "other": Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
+  - Authors seeking jobs or projects (e.g., "I am looking for a role in...").
   - Personal or team updates, such as starting, working on, or completing a project.
   - Personal updates or experiences.
   - Sharing professional frustrations or challenges.
@@ -58,6 +59,7 @@ You are a classifier analyzing LinkedIn posts to categorize them into specific t
   - Promoting tools, research, or volunteer opportunities without financial compensation.
 
 Special Instructions:
+- Posts where the author is seeking a job or project opportunity (e.g., "I am looking for a role as...") must always be classified as "other."
 - Posts where the author is promoting their own services (e.g., "I am open to projects in X") should always be classified as "other."
 - Posts inviting unpaid contributions or volunteer work (e.g., "participate in our research project" or "help build a community database") should always be classified as "other."
 - Posts describing community-driven or open-source projects should be classified as "other."
@@ -230,6 +232,51 @@ function prepare() {
     "width: 500px; height: 500px; position: absolute; top: 0; left: 0; z-index: 999; background-color: #ffffffee; overflow: scroll;";
 }
 
+async function helper_prompt_ai() {
+  bilbil_log("asking ai");
+
+  try {
+    const all = JSON.parse(localStorage.getItem("bilbil_data"));
+    const forAi = all.filter((it) => !it.ai);
+
+    bilbil_log("items: ", forAi.length);
+
+    const r = await prompt_ai(localStorage.getItem("bilbil_api_key"), forAi);
+
+    bilbil_log("got response");
+
+    const filtered = [];
+    for (const { key, post_type } of r) {
+      forAi[key].ai = { post_type };
+      if (post_type !== "other") {
+        filtered.push(forAi[key]);
+      }
+    }
+
+    localStorage.setItem("bilbil_data", JSON.stringify(all));
+    localStorage.setItem(
+      "bilbil_cnt_not_other",
+      all.reduce(
+        (s, it) =>
+          it.ai?.post_type && it.ai.post_type !== "other" ? s + 1 : s,
+        0
+      )
+    );
+
+    bilbil_log("\n\n\n---------------------------------\n\n\n");
+
+    bilbil_log(filtered.map((it) => JSON.stringify(it)).join("\n"));
+
+    updateAlert();
+  } catch (e) {
+    if (e === "api_key") {
+      bilbil_error("must define api_key");
+    } else {
+      bilbil_error(e);
+    }
+  }
+}
+
 async function search(terms, MAX_DEPTH = 10) {
   let agg = [];
 
@@ -282,15 +329,16 @@ async function search(terms, MAX_DEPTH = 10) {
               ...ifr.contentDocument.querySelectorAll("div[data-urn]"),
             ]
               .map((it) => ({
-                urn: Number(
-                  it.getAttribute("data-urn").replace("urn:li:activity:", "")
-                ),
+                // urn: Number(
+                //   it.getAttribute("data-urn").replace("urn:li:activity:", "")
+                // ),
+                urn: it.getAttribute("data-urn"),
                 time: parseTimeAgo(
                   it
                     .querySelector(
                       "div > div > a.update-components-actor__sub-description-link > span > span.visually-hidden"
                     )
-                    ?.textContent.trim()
+                    ?.textContent?.trim()
                 ),
                 profile_link:
                   (($_profile =
@@ -301,8 +349,8 @@ async function search(terms, MAX_DEPTH = 10) {
                     ? $_profile.substr(0, $_idx)
                     : $_profile),
                 text: it
-                  ?.querySelector("div.update-components-text")
-                  .textContent.trim(),
+                  .querySelector("div.update-components-text")
+                  ?.textContent?.trim(),
               }))
               .filter((it) => it.profile_link && it.text && it.time && it.urn);
 
@@ -347,32 +395,33 @@ async function search(terms, MAX_DEPTH = 10) {
           it["urn"] && Date.now() - it["time"].getTime() < timeUnits["month"]
       );
       agg.sort((a, b) => a.time - b.time);
-      let storedUrn = localStorage.getItem("bilbil_urn");
-      let storedTime = localStorage.getItem("bilbil_time");
-      if (storedTime) {
-        storedTime = new Date(storedTime);
-        agg = agg.filter((it) => it["time"].getTime() > storedTime.getTime());
-      }
-      if (storedUrn) {
-        storedUrn = Number(storedUrn);
-        agg = agg.filter((it) => it["urn"] > storedUrn);
-      }
 
       if (agg.length) {
         bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
 
-        localStorage.setItem(
-          "bilbil_time",
-          agg[agg.length - 1].time.toISOString()
-        );
-        localStorage.setItem("bilbil_urn", agg[agg.length - 1].urn);
-
         const MAX_ENTRIES = 500;
 
-        let all = [
-          ...JSON.parse(localStorage.getItem("bilbil_data") ?? "[]"),
-          ...agg,
-        ];
+        const prevData = JSON.parse(
+          localStorage.getItem("bilbil_data") ?? "[]"
+        );
+        const uniqUrns = new Map();
+        {
+          let i = 0;
+          for (const item of prevData) {
+            uniqUrns.set(item.urn, i++);
+          }
+        }
+
+        let all = [...prevData];
+
+        for (const item of agg) {
+          if (!uniqUrns.has(item.urn)) {
+            all.push(item);
+          } else {
+            // update text
+            all[uniqUrns.get(item.urn)].text = item.text;
+          }
+        }
         if (MAX_ENTRIES < all.length) {
           const offset = all.length - MAX_ENTRIES;
           all = all.slice(offset);
@@ -380,45 +429,7 @@ async function search(terms, MAX_DEPTH = 10) {
 
         localStorage.setItem("bilbil_data", JSON.stringify(all));
 
-        bilbil_log("asking ai");
-
-        try {
-          const forAi = all.filter((it) => !it.ai);
-          const r = await prompt_ai(
-            localStorage.getItem("bilbil_api_key"),
-            forAi
-          );
-
-          bilbil_log("got response");
-
-          const filtered = [];
-          for (const { key, post_type } of r) {
-            forAi[key].ai = { post_type };
-            if (post_type !== "other") {
-              filtered.push(forAi[key]);
-            }
-          }
-
-          localStorage.setItem("bilbil_data", JSON.stringify(all));
-          localStorage.setItem(
-            "bilbil_cnt_not_other",
-            all.reduce(
-              (s, it) =>
-                it.ai?.post_type && it.ai.post_type !== "other" ? s + 1 : s,
-              0
-            )
-          );
-
-          bilbil_log("\n\n\n---------------------------------\n\n\n");
-
-          bilbil_log(filtered.map((it) => JSON.stringify(it)).join("\n"));
-        } catch (e) {
-          if (e === "api_key") {
-            bilbil_error("must define api_key");
-          } else {
-            bilbil_error(e);
-          }
-        }
+        await helper_prompt_ai();
       } else {
         bilbil_log("empty 2");
       }
@@ -470,8 +481,6 @@ async function search_loop(terms) {
 
   await search(terms, lastRunLessThanDay ? 3 : 10);
 
-  updateAlert();
-
   localStorage.setItem("bilbil_last_run", new Date().toISOString());
 
   await delay(RUN_DELAY);
@@ -490,7 +499,7 @@ async function search_loop(terms) {
     let buttonsContainer = document.createElement("ul");
 
     buttonsContainer.style =
-      "position: absolute; top: 0; right: 0; width: 400px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
+      "position: absolute; top: 0; right: 0; width: 480px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
 
     document.body.appendChild(buttonsContainer);
 
@@ -565,6 +574,15 @@ async function search_loop(terms) {
     buttonsContainer.appendChild(resolveAlertBtnElement);
     resolveAlertBtnElement.addEventListener("click", bilbil_resolveAlert_click);
 
+    window.bilbil_ai_click = (ev) => {
+      helper_prompt_ai();
+    };
+    const aiBtnElement = document.createElement("li");
+    aiBtnElement.id = "bilbil_ai";
+    aiBtnElement.innerHTML = `<a class="global-nav__primary-link global-nav__primary-link" target="_self">AI</a>`;
+    buttonsContainer.appendChild(aiBtnElement);
+    aiBtnElement.addEventListener("click", bilbil_ai_click);
+
     window.bilbil_empty_click = (ev) => {
       bilbil_clear();
       updateAlert();
@@ -580,8 +598,7 @@ async function search_loop(terms) {
       chrome.runtime.sendMessage(
         { action: "delay", ms: 10_000 },
         (response) => {
-          bilbil_log("keepAlive");
-
+          // bilbil_log("keepAlive");
           keepAlive();
         }
       );
