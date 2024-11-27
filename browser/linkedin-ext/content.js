@@ -278,36 +278,33 @@ async function search(terms, MAX_DEPTH = 10) {
               bilbil_error(e);
             }
 
-            const extracted = zip(
-              [
-                ...ifr.contentDocument.querySelectorAll(
-                  "div.update-components-text"
-                ),
-              ].map((it) => it.textContent.trim()),
-              [
-                ...ifr.contentDocument.querySelectorAll(
-                  "div > div > div.fie-impression-container > div.relative > div.display-flex.update-components-actor--with-control-menu > div > a"
-                ),
-              ].map((it) => it.href),
-              [
-                ...ifr.contentDocument.querySelectorAll(
-                  "div > div > a.update-components-actor__sub-description-link > span > span.visually-hidden"
-                ),
-              ].map((it) => it.textContent.trim()),
-              [...ifr.contentDocument.querySelectorAll("div[data-urn]")].map(
-                (it) => it.getAttribute("data-urn")
-              )
-            )
-              .filter((it) => it[1])
+            const extracted = [
+              ...ifr.contentDocument.querySelectorAll("div[data-urn]"),
+            ]
               .map((it) => ({
-                text: it[0],
+                urn: Number(
+                  it.getAttribute("data-urn").replace("urn:li:activity:", "")
+                ),
+                time: parseTimeAgo(
+                  it
+                    .querySelector(
+                      "div > div > a.update-components-actor__sub-description-link > span > span.visually-hidden"
+                    )
+                    ?.textContent.trim()
+                ),
                 profile_link:
-                  ($_idx = it[1].indexOf("?")) > -1
-                    ? it[1].substr(0, $_idx)
-                    : it[1],
-                time: parseTimeAgo(it[2]),
-                urn: Number(it[3]?.replace("urn:li:activity:", "")),
-              }));
+                  (($_profile =
+                    it.querySelector(
+                      "div > div > div.fie-impression-container > div.relative > div.display-flex.update-components-actor--with-control-menu > div > a"
+                    )?.href ?? ""),
+                  ($_idx = $_profile.indexOf("?")) > -1
+                    ? $_profile.substr(0, $_idx)
+                    : $_profile),
+                text: it
+                  ?.querySelector("div.update-components-text")
+                  .textContent.trim(),
+              }))
+              .filter((it) => it.profile_link && it.text && it.time && it.urn);
 
             promiseSuccess(extracted);
           } catch (e) {
@@ -433,6 +430,14 @@ async function search(terms, MAX_DEPTH = 10) {
   }
 }
 
+function clearLocalStorage_1() {
+  localStorage.removeItem("bilbil_cnt_not_other");
+  localStorage.removeItem("bilbil_last_run");
+  localStorage.removeItem("bilbil_data");
+  localStorage.removeItem("bilbil_time");
+  localStorage.removeItem("bilbil_urn");
+}
+
 function updateAlert() {
   let cntNotOther = localStorage.getItem("bilbil_cnt_not_other");
   if (cntNotOther) {
@@ -485,7 +490,7 @@ async function search_loop(terms) {
     let buttonsContainer = document.createElement("ul");
 
     buttonsContainer.style =
-      "position: absolute; top: 0; right: 0; width: 320px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
+      "position: absolute; top: 0; right: 0; width: 400px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
 
     document.body.appendChild(buttonsContainer);
 
@@ -584,7 +589,13 @@ async function search_loop(terms) {
 
     keepAlive();
     prepare();
-    search_loop(['"پروژه" هوش مصنوعی "فارسی"', '"پروژه" AI', '"پروژه" NLP']);
+    search_loop([
+      '"پروژه" هوش مصنوعی "فارسی"',
+      '"پروژه" AI',
+      '"پروژه" NLP',
+      '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") هوش مصنوعی',
+      '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") (وب OR موبایل)',
+    ]);
   };
 
   const observer = new MutationObserver(function (mutations, mutationInstance) {
