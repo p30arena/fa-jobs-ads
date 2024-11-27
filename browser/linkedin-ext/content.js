@@ -408,6 +408,7 @@ async function search(terms, MAX_DEPTH = 10) {
         const prevData = JSON.parse(
           localStorage.getItem("bilbil_data") ?? "[]"
         );
+
         const uniqUrns = new Map();
         {
           let i = 0;
@@ -417,13 +418,17 @@ async function search(terms, MAX_DEPTH = 10) {
         }
 
         let all = [...prevData];
-
-        for (const item of agg) {
-          if (!uniqUrns.has(item.urn)) {
-            all.push(item);
-          } else {
-            // update text
-            all[uniqUrns.get(item.urn)].text = item.text;
+        {
+          let push_beg_idx = all.length,
+            i = all.length;
+          for (const item of agg) {
+            if (!uniqUrns.has(item.urn)) {
+              all.push(item);
+              uniqUrns.set(item.urn, i++);
+            } else if (uniqUrns.get(item.urn) < push_beg_idx) {
+              // update text
+              all[uniqUrns.get(item.urn)].text = item.text;
+            }
           }
         }
 
