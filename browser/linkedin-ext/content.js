@@ -1,10 +1,14 @@
 function bilbil_log(...args) {
-  statusElement.value += args.join(" ") + "\n";
+  statusElement.value +=
+    args.map((it) => (typeof it === "string" ? it : it.toString())).join(" ") +
+    "\n";
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
 }
 
 function bilbil_error(...args) {
-  statusElement.value += args.join(" ") + "\n";
+  statusElement.value +=
+    args.map((it) => (typeof it === "string" ? it : it.toString())).join(" ") +
+    "\n";
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
 }
 
@@ -14,9 +18,9 @@ function bilbil_clear() {
 }
 
 function prompt_ai(api_key, data) {
-  if (!api_key) return;
+  if (!api_key) return new Promise((s, f) => f("api_key"));
 
-  fetch("https://api.openai.com/v1/chat/completions", {
+  return fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
 
     headers: {
@@ -27,14 +31,96 @@ function prompt_ai(api_key, data) {
 
     body: JSON.stringify({
       model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
+You are a classifier analyzing LinkedIn posts to categorize them into specific types. Your goal is to classify each post as either:
 
-      messages: [{ role: "user", content: "Say this is a test!" }],
+1. "job_posting": Posts explicitly advertising job openings. These posts include:
+ - Keywords such as "hiring," "position available," "we’re looking for," or "apply now."
+ - Include specific job roles, locations, qualifications, or application instructions.
 
-      temperature: 0.7,
+2. "contract_project": Posts explicitly offering freelance, consulting, or contract-based opportunities. These posts include:
+ - Keywords like "freelance," "short-term project," "contract opportunity," or "remote work."
+ - A clear offer to engage in a paid, task-specific arrangement.
+
+3. "other": Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
+ - Personal or team updates, such as starting, working on, or completing a project.
+ - Personal updates or experiences.
+ - Sharing professional frustrations or challenges.
+ - Posts sharing tools, tutorials, or non-commercial initiatives.
+ - General discussions about technology, achievements, or learning experiences.
+ - Advertising the author’s own skills or services without offering a role or opportunity.
+ - Inviting general discussions, collaborations, or non-commercial contributions.
+ - Invitations to participate in unpaid projects, community initiatives, or open-source collaborations.
+ - Posts inviting general discussions, collaboration, or feedback without offering a paid opportunity.
+ - Promoting tools, research, or volunteer opportunities without financial compensation.
+
+Special Instructions:
+- Posts where the author is promoting their own services (e.g., "I am open to projects in X") should always be classified as "other."
+- Posts inviting unpaid contributions or volunteer work (e.g., "participate in our research project" or "help build a community database") should always be classified as "other."
+- Posts describing community-driven or open-source projects should be classified as "other."
+- Posts inviting conversations, collaboration, or feedback without mentioning a paid opportunity should also be classified as "other."
+- Posts mentioning "starting a project" without offering roles or paid opportunities should be classified as "other."
+- Posts celebrating personal or team milestones should also be classified as "other."
+- Avoid classifying any post as "job_posting" or "contract_project" unless there is a clear invitation for hiring or paid engagement.
+- Focus on identifying explicit invitations for hiring or contract work. Avoid classifying posts as "job_posting" or "contract_project" unless they meet the criteria exactly.
+
+
+Example:
+
+Input:
+[
+  {
+      "key": 0,
+      "text": "We're hiring a software engineer to join our team in San Francisco. Apply now!"
+  },
+  {
+      "key": 1,
+      "text": "Looking for a freelancer to help with a short-term mobile app development project. Remote work."
+  },
+  {
+      "key": 2,
+      "text": "Excited to share my thoughts on leadership in the tech industry."
+  }
+]
+
+
+Output:
+{
+  "result": [
+      {
+          "key": 0,
+          "post_type": "job_posting"
+      },
+      {
+          "key": 1,
+          "post_type": "contract_project"
+      },
+      {
+          "key": 2,
+          "post_type": "other"
+      }
+  ]
+}
+
+
+Task:
+
+Please classify the following posts and return the Output JSON:
+${JSON.stringify(data)}
+      `,
+        },
+      ],
+      temperature: 0,
+      response_format: { type: "json_object" },
     }),
   })
     .then((r) => r.json())
-    .then((r) => bilbil_log(r));
+    .then((r) =>
+      JSON.parse(r.choices?.[0]?.message?.content ?? '{ "result": [] }')
+    );
 }
 
 var timeUnits = {
@@ -78,10 +164,19 @@ function zip(...arrays) {
 }
 
 async function delay(ms) {
-  return new Promise((resolve) => {
+  return new Promise((success, _) => {
+    let fired = false;
     setTimeout(() => {
-      resolve();
+      fired = true;
+      success();
     }, ms);
+
+    // in case browser ignores the timeout!
+    setTimeout(() => {
+      if (!fired) {
+        success();
+      }
+    }, ms + 1000);
   });
 }
 
@@ -125,22 +220,26 @@ async function search(terms) {
                 ".scaffold-finite-scroll__load-button"
               );
 
-            let depth = 0;
-            while (moreBtn() && depth++ < MAX_DEPTH) {
-              bilbil_log("page: ", depth);
+            try {
+              let depth = 0;
+              while (moreBtn() && depth++ < MAX_DEPTH) {
+                bilbil_log("page: ", depth);
 
-              ifr.contentWindow.scrollTo(
-                0,
-                ifr.contentDocument.body.scrollHeight
-              );
+                ifr.contentWindow.scrollTo(
+                  0,
+                  ifr.contentDocument.body.scrollHeight
+                );
 
-              await delay(3000);
+                await delay(3000);
 
-              let cnt = 0;
-              while (!moreBtn() && cnt++ < 10) {
-                bilbil_log("probing: ", cnt);
-                await delay(1000);
+                let cnt = 0;
+                while (!moreBtn() && cnt++ < 10) {
+                  bilbil_log("probing: ", cnt);
+                  await delay(1000);
+                }
               }
+            } catch (e) {
+              bilbil_error(e);
             }
 
             const extracted = zip(
@@ -235,8 +334,6 @@ async function search(terms) {
         );
         localStorage.setItem("bilbil_urn", agg[agg.length - 1].urn);
 
-        prompt_ai(localStorage.getItem("bilbil_api_key"), agg);
-
         const MAX_ENTRIES = 500;
 
         let all = [
@@ -261,8 +358,24 @@ async function search(terms) {
 }
 
 async function search_loop(terms) {
+  const RUN_DELAY = 300_000;
+
+  let lastRun = localStorage.getItem("bilbil_last_run");
+  if (lastRun) {
+    lastRun = new Date(lastRun);
+    const diff = Date.now() - lastRun.getTime();
+
+    if (RUN_DELAY > diff) {
+      await delay(RUN_DELAY - diff);
+    }
+  }
+
   await search(terms);
-  await delay(300_000);
+
+  localStorage.setItem("bilbil_last_run", new Date().toISOString());
+
+  await delay(RUN_DELAY);
+
   search_loop(terms);
 }
 
@@ -275,28 +388,92 @@ async function search_loop(terms) {
 
   const get_container = () =>
     document.querySelector(".global-nav__primary-items");
-  const get_retry_btn = () => document.getElementById("xyz_retry");
+  const get_toggle_btn = () => document.getElementById("bilbil_toggle");
+  const get_dump_btn = () => document.getElementById("bilbil_dump");
+  const get_ai_btn = () => document.getElementById("bilbil_ai");
+  const get_empty_btn = () => document.getElementById("bilbil_empty");
+
   const inject = () => {
-    window.xyz_retry = () => {
+    window.bilbil_toggle_click = () => {
       if (statusElement.className === "bilbil_hidden") {
         statusElement.className = "";
       } else {
         statusElement.className = "bilbil_hidden";
       }
     };
-    qwe = document.createElement("span");
-    qwe.innerHTML = `<li class="global-nav__primary-item"><button id="xyz_retry" class="h-10 rounded-lg px-2 text-token-text-secondary focus-visible:outline-0 disabled:text-token-text-quaternary focus-visible:bg-token-main-surface-secondary enabled:hover:bg-token-main-surface-secondary"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-2xl"><path fill-rule="evenodd" clip-rule="evenodd" d="M15.1918 8.90615C15.6381 8.45983 16.3618 8.45983 16.8081 8.90615L21.9509 14.049C22.3972 14.4953 22.3972 15.2189 21.9509 15.6652C21.5046 16.1116 20.781 16.1116 20.3347 15.6652L17.1428 12.4734V22.2857C17.1428 22.9169 16.6311 23.4286 15.9999 23.4286C15.3688 23.4286 14.8571 22.9169 14.8571 22.2857V12.4734L11.6652 15.6652C11.2189 16.1116 10.4953 16.1116 10.049 15.6652C9.60265 15.2189 9.60265 14.4953 10.049 14.049L15.1918 8.90615Z" fill="currentColor"></path></svg></button></li>`;
-    get_container().appendChild(qwe);
-    get_retry_btn().onclick = xyz_retry;
+    const toggleBtnElement = document.createElement("span");
+    toggleBtnElement.innerHTML = `<li class="global-nav__primary-item"><a class="global-nav__primary-link global-nav__primary-link" target="_self"><button id="bilbil_toggle">Terminal</button></a></li>`;
+    get_container().appendChild(toggleBtnElement);
+    get_toggle_btn().onclick = bilbil_toggle_click;
+
+    window.bilbil_dump_click = () => {
+      bilbil_clear();
+      let agg = localStorage.getItem("bilbil_data");
+      if (!agg) return;
+      agg = JSON.parse(agg);
+      bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
+      if (statusElement.className === "bilbil_hidden") {
+        statusElement.className = "";
+      }
+    };
+    const dumpBtnElement = document.createElement("span");
+    dumpBtnElement.innerHTML = `<li class="global-nav__primary-item"><a class="global-nav__primary-link global-nav__primary-link" target="_self"><button id="bilbil_dump">Dump</button></a></li>`;
+    get_container().appendChild(dumpBtnElement);
+    get_dump_btn().onclick = bilbil_dump_click;
+
+    window.bilbil_ai_click = () => {
+      bilbil_clear();
+      let agg = localStorage.getItem("bilbil_data");
+      if (!agg) return;
+      agg = JSON.parse(agg);
+      if (statusElement.className === "bilbil_hidden") {
+        statusElement.className = "";
+      }
+
+      bilbil_log("asking ai");
+
+      prompt_ai(localStorage.getItem("bilbil_api_key"), agg)
+        .then((r) => {
+          const filtered = [];
+          for (const { key, post_type } of r.result) {
+            bilbil_log("post_type: ", post_type);
+            if (post_type !== "other") {
+              filtered.push(agg[key]);
+            }
+          }
+
+          bilbil_log("\n\n\n---------------------------------\n\n\n");
+
+          bilbil_log(filtered.map((it) => JSON.stringify(it)).join("\n"));
+        })
+        .catch((e) => {
+          if (e === "api_key") {
+            bilbil_error("must define api_key");
+          }
+        });
+    };
+    const aiBtnElement = document.createElement("span");
+    aiBtnElement.innerHTML = `<li class="global-nav__primary-item"><a class="global-nav__primary-link global-nav__primary-link" target="_self"><button id="bilbil_ai">AI</button></a></li>`;
+    get_container().appendChild(aiBtnElement);
+    get_ai_btn().onclick = bilbil_ai_click;
+
+    window.bilbil_empty_click = () => {
+      bilbil_clear();
+      localStorage.removeItem("bilbil_data");
+    };
+    const emptyBtnElement = document.createElement("span");
+    emptyBtnElement.innerHTML = `<li class="global-nav__primary-item"><a class="global-nav__primary-link global-nav__primary-link" target="_self"><button id="bilbil_empty">Empty</button></a></li>`;
+    get_container().appendChild(emptyBtnElement);
+    get_empty_btn().onclick = bilbil_empty_click;
 
     prepare();
-    search(['"پروژه" هوش مصنوعی "فارسی"', '"پروژه" AI', '"پروژه" NLP']);
+    search_loop(['"پروژه" هوش مصنوعی "فارسی"', '"پروژه" AI', '"پروژه" NLP']);
   };
 
   const observer = new MutationObserver(function (mutations, mutationInstance) {
     if (get_container()) {
       mutationInstance.disconnect();
-      if (!get_retry_btn()) {
+      if (!get_toggle_btn()) {
         inject();
       }
     }
