@@ -123,9 +123,8 @@ Please classify the following posts and return the Output JSON:
   for (const item of data) {
     chunks.push({ key: item.key, text: item.excerpt });
     cnt += item.text.length;
-    i++;
 
-    if (promptStr.length + cnt > MAX_TOKENS * 0.7 || i == data.length - 1) {
+    if (promptStr.length + cnt > MAX_TOKENS * 0.7 || i++ == data.length - 1) {
       cnt = 0;
 
       try {
@@ -427,6 +426,7 @@ async function search(terms, MAX_DEPTH = 10) {
             all[uniqUrns.get(item.urn)].text = item.text;
           }
         }
+
         if (MAX_ENTRIES < all.length) {
           const offset = all.length - MAX_ENTRIES;
           all = all.slice(offset);
@@ -466,11 +466,10 @@ function updateAlert() {
   }
 }
 
-var loop_running = false;
 async function search_loop(terms) {
   try {
     const RUN_DELAY = 300_000;
-    loop_running = true;
+    document.body.setAttribute("bilbil_loop_running", "true");
 
     updateAlert();
 
@@ -495,27 +494,39 @@ async function search_loop(terms) {
 
     search_loop(terms);
   } catch (e) {
-    loop_running = false;
+    document.body.setAttribute("bilbil_loop_running", "false");
     bilbil_error(e);
   }
 }
 
 function keepAlive() {
-  chrome.runtime.sendMessage({ action: "delay", ms: 10_000 }, (response) => {
-    // bilbil_log("keepAlive");
-    keepAlive();
-  });
+  try {
+    chrome.runtime.sendMessage({ action: "delay", ms: 10_000 }, (response) => {
+      // bilbil_log("keepAlive");
+      keepAlive();
+    });
+
+    document.body.setAttribute("bilbil_keepAlive_running", "true");
+  } catch (e) {
+    document.body.setAttribute("bilbil_keepAlive_running", "false");
+    bilbil_error(e);
+  }
 }
 
 function search_loop_helper() {
-  keepAlive();
-  search_loop([
-    '"پروژه" هوش مصنوعی "فارسی"',
-    '"پروژه" AI',
-    '"پروژه" NLP',
-    '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") هوش مصنوعی',
-    '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") (وب OR موبایل)',
-  ]);
+  if (document.body.getAttribute("bilbil_keepAlive_running") !== "true") {
+    keepAlive();
+  }
+
+  if (document.body.getAttribute("bilbil_loop_running") !== "true") {
+    search_loop([
+      '"پروژه" هوش مصنوعی "فارسی"',
+      '"پروژه" AI',
+      '"پروژه" NLP',
+      '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") هوش مصنوعی',
+      '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") (وب OR موبایل)',
+    ]);
+  }
 }
 
 (() => {
@@ -635,9 +646,7 @@ function search_loop_helper() {
       if (!get_toggle_btn()) {
         inject();
       } else {
-        if (!loop_running) {
-          search_loop_helper();
-        }
+        search_loop_helper();
       }
     }
   });

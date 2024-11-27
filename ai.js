@@ -67,9 +67,8 @@ async function main() {
   for (const item of data) {
     chunks.push({ key: item.key, text: item.excerpt });
     cnt += item.text.length;
-    i++;
 
-    if (cnt > MAX_TOKENS / 2 || i == data.length - 1) {
+    if (cnt > MAX_TOKENS / 2 || i++ == data.length - 1) {
       const res = await client.beta.chat.completions.parse({
         messages: [
           {
