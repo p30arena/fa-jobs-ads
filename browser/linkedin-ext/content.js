@@ -258,7 +258,9 @@ async function helper_prompt_ai() {
       "bilbil_cnt_not_other",
       all.reduce(
         (s, it) =>
-          it.ai?.post_type && it.ai.post_type !== "other" ? s + 1 : s,
+          it.ai?.post_type && it.ai.post_type !== "other" && !it.resolved
+            ? s + 1
+            : s,
         0
       )
     );
@@ -397,7 +399,8 @@ async function search(terms, MAX_DEPTH = 10) {
       agg.sort((a, b) => a.time - b.time);
 
       if (agg.length) {
-        bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
+        // bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
+        bilbil_log("length: ", agg.length);
 
         const MAX_ENTRIES = 500;
 
