@@ -43,10 +43,21 @@ const extract = () => {
 
     const MAX_PROBES = 10;
     let cntProbe = 0;
-    while (count_articles() < beforeCnt && cntProbe++ < MAX_PROBES) {
+    while (count_articles() === beforeCnt && cntProbe++ < MAX_PROBES) {
       await delay(1000);
     }
   }
 
+  const linksUniq = new Map();
+  for (const item of agg) {
+    if (!linksUniq.has(item.links.post)) {
+      linksUniq.set(item.links.post, item);
+    }
+  }
+
+  agg = [...linksUniq.values()];
+
   agg.sort((a, b) => a.time - b.time);
+
+  console.log(agg.map((it) => JSON.stringify(it)).join("\n"));
 })();

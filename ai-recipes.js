@@ -3,19 +3,6 @@ const { zodResponseFormat } = require("openai/helpers/zod");
 const { z } = require("zod");
 const client = new (require("openai").OpenAI)();
 
-const zTxtAnalysisResponse = z.object({
-  result: z.array(
-    z.object({
-      key: z.number(),
-      post_type: z.enum(["job_posting", "contract_project", "other"]),
-    })
-  ),
-});
-
-const txtAnalysisResponseFormat = zodResponseFormat(
-  zTxtAnalysisResponse,
-  "TxtAnalysis"
-);
 let timeUnits = {
   second: 1000,
   minute: 60 * 1000,
@@ -45,12 +32,28 @@ function parseTimeAgo(timeAgoStr) {
   return pastTime;
 }
 
-async function main() {
+async function test_classify_post() {
+  const zTxtAnalysisResponse = z.object({
+    result: z.array(
+      z.object({
+        key: z.number(),
+        post_type: z.enum(["job_posting", "contract_project", "other"]),
+      })
+    ),
+  });
+
+  const txtAnalysisResponseFormat = zodResponseFormat(
+    zTxtAnalysisResponse,
+    "TxtAnalysis"
+  );
+
   const MAX_TOKENS = 128_000;
   const data = (
     await require("fs/promises").readFile(
       "./data/2024-11-26/linkedin-projects-ai.jsonl",
-      "utf8"
+      {
+        encoding: "utf-8",
+      }
     )
   )
     .split("\n")
@@ -174,4 +177,59 @@ ${JSON.stringify(chunks)}
   }
 }
 
-main();
+async function sales_advice() {
+  const data = (
+    await require("fs/promises").readFile("./data/2024-11-27/x.jsonl", {
+      encoding: "utf-8",
+    })
+  )
+    .split("\n")
+    .filter((it) => it)
+    .map((it) => JSON.parse(it));
+
+  for (const item of data) {
+    try {
+      const res = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `
+You are a helpful Sales Assistant of TikoShop (tikoshop.ir), a Skin Care Shop with Original Products!
+If the user is complaining about their sking condition, help them and introduce them to TikoShop, else, say nothing!
+`,
+          },
+          {
+            role: "user",
+            content: item.text,
+          },
+        ],
+      });
+
+      if (res.choices.length) {
+        const content = res.choices[0].message.content;
+        if (content) {
+          item.ai = { content };
+
+          console.log("query: ", item.text);
+          console.log("answer: ", content);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  await require("fs/promises").writeFile(
+    "./data/2024-11-27/x.jsonl",
+    data.map((it) => JSON.stringify(it)).join("\n"),
+    {
+      encoding: "utf-8",
+    }
+  );
+}
+
+module.exports = {
+  test_classify_post,
+  sales_advice,
+};
