@@ -249,6 +249,7 @@ async function helper_prompt_ai() {
     const filtered = [];
     for (const { key, post_type } of r) {
       forAi[key].ai = { post_type };
+
       if (post_type !== "other") {
         filtered.push(forAi[key]);
       }
@@ -266,11 +267,10 @@ async function helper_prompt_ai() {
       )
     );
 
-    bilbil_log("\n\n\n---------------------------------\n\n\n");
-
-    bilbil_log(filtered.map((it) => JSON.stringify(it)).join("\n"));
-
     updateAlert();
+
+    bilbil_log("\n\n\n---------------------------------\n\n\n");
+    bilbil_log(filtered.map((it) => JSON.stringify(it)).join("\n"));
   } catch (e) {
     if (e === "api_key") {
       bilbil_error("must define api_key");
@@ -410,31 +410,25 @@ async function search(terms, MAX_DEPTH = 10) {
         );
 
         const uniqUrns = new Map();
-        {
-          let i = 0;
-          for (const item of prevData) {
-            uniqUrns.set(item.urn, i++);
+        for (let i = 0; i < prevData.length; i++) {
+          uniqUrns.set(prevData[i].urn, i);
+        }
+
+        let all = prevData.slice(-MAX_ENTRIES);
+
+        for (const item of agg) {
+          if (!uniqUrns.has(item.urn)) {
+            all.push(item);
+            uniqUrns.set(item.urn, all.length - 1);
+          } else if (uniqUrns.get(item.urn) < prevData.length) {
+            // update text
+            all[uniqUrns.get(item.urn)].text = item.text;
           }
         }
 
-        let all = [...prevData];
-        {
-          let push_beg_idx = all.length,
-            i = all.length;
-          for (const item of agg) {
-            if (!uniqUrns.has(item.urn)) {
-              all.push(item);
-              uniqUrns.set(item.urn, i++);
-            } else if (uniqUrns.get(item.urn) < push_beg_idx) {
-              // update text
-              all[uniqUrns.get(item.urn)].text = item.text;
-            }
-          }
-        }
-
-        if (MAX_ENTRIES < all.length) {
-          const offset = all.length - MAX_ENTRIES;
-          all = all.slice(offset);
+        // Ensure we don't exceed MAX_ENTRIES
+        if (all.length > MAX_ENTRIES) {
+          all = all.slice(-MAX_ENTRIES);
         }
 
         localStorage.setItem("bilbil_data", JSON.stringify(all));
