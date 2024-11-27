@@ -1,13 +1,10 @@
-var statusElement = document.createElement("textarea");
-var ifr = document.createElement("iframe");
-
 function bilbil_log(...args) {
-  statusElement.value += args.join("\n") + "\n";
+  statusElement.value += args.join(" ") + "\n";
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
 }
 
 function bilbil_error(...args) {
-  statusElement.value += args.join("\n") + "\n";
+  statusElement.value += args.join(" ") + "\n";
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
 }
 
@@ -37,7 +34,7 @@ function prompt_ai(api_key, data) {
     }),
   })
     .then((r) => r.json())
-    .then((r) => console.log(r));
+    .then((r) => bilbil_log(r));
 }
 
 var timeUnits = {
@@ -98,62 +95,6 @@ function prepare() {
 
   ifr.width = "1400px";
   ifr.height = "700px";
-  ifr.onload = async () => {
-    try {
-      const MAX_DEPTH = 3;
-      bilbil_log("loaded");
-
-      const moreBtn = () =>
-        ifr.contentDocument.querySelector(
-          ".scaffold-finite-scroll__load-button"
-        );
-
-      let depth = 0;
-      while (moreBtn() && depth++ < MAX_DEPTH) {
-        bilbil_log("page: ", depth);
-
-        ifr.contentWindow.scrollTo(0, ifr.contentDocument.body.scrollHeight);
-
-        await delay(3000);
-
-        let cnt = 0;
-        while (!moreBtn() && cnt++ < 10) {
-          await delay(1000);
-        }
-      }
-
-      const extracted = zip(
-        [
-          ...ifr.contentDocument.querySelectorAll("div.update-components-text"),
-        ].map((it) => it.textContent.trim()),
-        [
-          ...ifr.contentDocument.querySelectorAll(
-            "div > div > div.fie-impression-container > div.relative > div.display-flex.update-components-actor--with-control-menu > div > a"
-          ),
-        ].map((it) => it.href),
-        [
-          ...ifr.contentDocument.querySelectorAll(
-            "div > div > a.update-components-actor__sub-description-link > span > span.visually-hidden"
-          ),
-        ].map((it) => it.textContent.trim())
-      )
-        .filter((it) => it[1])
-        .map((it) => ({
-          text: it[0],
-          profile_link:
-            ($_idx = it[1].indexOf("?")) > -1 ? it[1].substr(0, $_idx) : it[1],
-          time: parseTimeAgo(it[2]),
-        }));
-
-      ifr.promiseSuccess(extracted);
-    } catch (e) {
-      ifr.promiseFailure(e);
-    }
-  };
-
-  ifr.onerror = (ev) => {
-    ifr.promiseFailure(ev);
-  };
 
   ifr.style =
     "visibility: hidden; position: absolute; top: 0; left: 0; z-index: -1;";
@@ -168,23 +109,95 @@ async function search(terms) {
     bilbil_log("keyword: ", search);
     let promiseFinalized = false;
     try {
-      const p = new Promise(async (s, f) => {
-        ifr.promiseSuccess = s;
-        ifr.promiseFailure = f;
+      const p = new Promise(async (promiseSuccess, promiseFailure) => {
+        ifr.onload = async () => {
+          if (!ifr.contentDocument) {
+            bilbil_log("false load");
+            return; // false load event
+          }
+
+          try {
+            const MAX_DEPTH = 3;
+            bilbil_log("loaded");
+
+            const moreBtn = () =>
+              ifr.contentDocument.querySelector(
+                ".scaffold-finite-scroll__load-button"
+              );
+
+            let depth = 0;
+            while (moreBtn() && depth++ < MAX_DEPTH) {
+              bilbil_log("page: ", depth);
+
+              ifr.contentWindow.scrollTo(
+                0,
+                ifr.contentDocument.body.scrollHeight
+              );
+
+              await delay(3000);
+
+              let cnt = 0;
+              while (!moreBtn() && cnt++ < 10) {
+                bilbil_log("probing: ", cnt);
+                await delay(1000);
+              }
+            }
+
+            const extracted = zip(
+              [
+                ...ifr.contentDocument.querySelectorAll(
+                  "div.update-components-text"
+                ),
+              ].map((it) => it.textContent.trim()),
+              [
+                ...ifr.contentDocument.querySelectorAll(
+                  "div > div > div.fie-impression-container > div.relative > div.display-flex.update-components-actor--with-control-menu > div > a"
+                ),
+              ].map((it) => it.href),
+              [
+                ...ifr.contentDocument.querySelectorAll(
+                  "div > div > a.update-components-actor__sub-description-link > span > span.visually-hidden"
+                ),
+              ].map((it) => it.textContent.trim()),
+              [...ifr.contentDocument.querySelectorAll("div[data-urn]")].map(
+                (it) => it.getAttribute("data-urn")
+              )
+            )
+              .filter((it) => it[1])
+              .map((it) => ({
+                text: it[0],
+                profile_link:
+                  ($_idx = it[1].indexOf("?")) > -1
+                    ? it[1].substr(0, $_idx)
+                    : it[1],
+                time: parseTimeAgo(it[2]),
+                urn: Number(it[3]?.replace("urn:li:activity:", "")),
+              }));
+
+            promiseSuccess(extracted);
+          } catch (e) {
+            promiseFailure(e);
+          }
+        };
+
+        ifr.onerror = (ev) => {
+          promiseFailure(ev);
+        };
 
         ifr.src = `https://www.linkedin.com/search/results/content/?datePosted="past-month"&keywords=${encodeURIComponent(
           search
         )}&origin=FACETED_SEARCH&sid=~nt&sortBy="date_posted"`;
 
-        await delay(300_000);
+        await delay(120_000);
 
         if (!promiseFinalized) {
-          f(new Error("timeout"));
+          promiseFailure(new Error("timeout"));
         }
       });
 
       const data = await p;
       agg = [...agg, ...data];
+      bilbil_log("result length: ", data.length);
     } catch (e) {
       bilbil_error(e);
     } finally {
@@ -192,25 +205,58 @@ async function search(terms) {
     }
   }
 
-  console.log("search done");
-  bilbil_clear();
+  try {
+    bilbil_log("search done");
+    bilbil_clear();
 
-  if (agg.length) {
-    agg = agg.filter(
-      (it) => Date.now() - it["time"].getTime() < timeUnits["week"]
-    );
-    agg.sort((a, b) => a.time - b.time);
-    let storedTime = localStorage.getItem("bilbil_time");
-    if (storedTime) {
-      storedTime = new Date(storedTime);
-      agg = agg.filter((it) => it["time"].getTime() > storedTime);
+    if (agg.length) {
+      agg = agg.filter(
+        (it) =>
+          it["urn"] && Date.now() - it["time"].getTime() < timeUnits["week"]
+      );
+      agg.sort((a, b) => a.time - b.time);
+      let storedUrn = localStorage.getItem("bilbil_urn");
+      let storedTime = localStorage.getItem("bilbil_time");
+      if (storedTime) {
+        storedTime = new Date(storedTime);
+        agg = agg.filter((it) => it["time"].getTime() > storedTime.getTime());
+      }
+      if (storedUrn) {
+        storedUrn = Number(storedUrn);
+        agg = agg.filter((it) => it["urn"] > storedUrn);
+      }
+
+      if (agg.length) {
+        bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
+
+        localStorage.setItem(
+          "bilbil_time",
+          agg[agg.length - 1].time.toISOString()
+        );
+        localStorage.setItem("bilbil_urn", agg[agg.length - 1].urn);
+
+        prompt_ai(localStorage.getItem("bilbil_api_key"), agg);
+
+        const MAX_ENTRIES = 500;
+
+        let all = [
+          ...JSON.parse(localStorage.getItem("bilbil_data") ?? "[]"),
+          ...agg,
+        ];
+        if (MAX_ENTRIES < all.length) {
+          const offset = all.length - MAX_ENTRIES;
+          all = all.slice(offset);
+        }
+
+        localStorage.setItem("bilbil_data", JSON.stringify(all));
+      } else {
+        bilbil_log("empty 2");
+      }
+    } else {
+      bilbil_log("empty 1");
     }
-
-    bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
-
-    localStorage.setItem("bilbil_time", agg[agg.length - 1].time.toISOString());
-
-    prompt_ai(localStorage.getItem("bilbil_api_key"), agg);
+  } catch (e) {
+    bilbil_error(e);
   }
 }
 
@@ -221,6 +267,12 @@ async function search_loop(terms) {
 }
 
 (() => {
+  let statusElement = document.createElement("textarea");
+  let ifr = document.createElement("iframe");
+
+  window.statusElement = statusElement;
+  window.ifr = ifr;
+
   const get_container = () =>
     document.querySelector(".global-nav__primary-items");
   const get_retry_btn = () => document.getElementById("xyz_retry");
