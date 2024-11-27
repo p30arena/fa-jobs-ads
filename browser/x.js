@@ -1,6 +1,12 @@
 // https://x.com/search?f=live&q=%D8%AC%D9%88%D8%B4%20%D8%B5%D9%88%D8%B1%D8%AA%20lang%3Afa%20-filter%3Alinks%20-filter%3Areplies&src=typed_query
 
 const count_articles = () => document.querySelectorAll("article").length;
+const progressbar = () => document.querySelector('div[role="progressbar"]');
+const retry_btn = () =>
+  document.querySelector(
+    'div[aria-label="Timeline: Search timeline"] > div > div:last-child button[role="button"]'
+  );
+
 async function delay(ms) {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -37,14 +43,29 @@ const extract = () => {
   let agg = [];
 
   while (page++ < MAX_DEPTH) {
-    agg = [...agg, ...extract()];
-    const beforeCnt = count_articles();
-    window.scrollTo(0, document.body.scrollHeight);
+    const data = extract();
+    if (!data.length) {
+      break;
+    }
 
-    const MAX_PROBES = 10;
-    let cntProbe = 0;
-    while (count_articles() === beforeCnt && cntProbe++ < MAX_PROBES) {
+    if (
+      agg.length &&
+      data[data.length - 1].links.post === agg[agg.length - 1].links.post
+    ) {
+      break;
+    }
+
+    agg = [...agg, ...data];
+
+    window.scrollTo(0, document.body.scrollHeight);
+    await delay(1000);
+
+    while (progressbar()) {
       await delay(1000);
+    }
+
+    if (retry_btn()) {
+      break;
     }
   }
 
