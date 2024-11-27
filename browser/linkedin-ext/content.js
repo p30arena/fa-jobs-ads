@@ -600,10 +600,12 @@ function search_loop_helper() {
       let agg = localStorage.getItem("bilbil_data");
       if (!agg) return;
       agg = JSON.parse(agg);
-      agg = agg.filter(
-        (it) => it.ai?.post_type && it.ai?.post_type !== "other" && !it.resolved
-      );
-      agg.forEach((it) => (it.resolved = true));
+      agg
+        .filter(
+          (it) =>
+            it.ai?.post_type && it.ai?.post_type !== "other" && !it.resolved
+        )
+        .forEach((it) => (it.resolved = true));
       localStorage.setItem("bilbil_data", JSON.stringify(agg));
       localStorage.setItem("bilbil_cnt_not_other", "0");
       updateAlert();
