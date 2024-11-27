@@ -32,7 +32,7 @@ function parseTimeAgo(timeAgoStr) {
   return pastTime;
 }
 
-async function test_classify_post() {
+async function test_classify_post(filePath) {
   const zTxtAnalysisResponse = z.object({
     result: z.array(
       z.object({
@@ -49,25 +49,21 @@ async function test_classify_post() {
 
   const MAX_TOKENS = 128_000;
   const data = (
-    await require("fs/promises").readFile(
-      "./data/2024-11-26/linkedin-projects-ai.jsonl",
-      {
-        encoding: "utf-8",
-      }
-    )
+    await require("fs/promises").readFile(filePath, {
+      encoding: "utf-8",
+    })
   )
     .split("\n")
     .filter((it) => it)
-    .map((it, i) => JSON.parse(it))
-    .map((it, i) => ({
-      ...it,
-      time:
-        typeof it["time"].indexOf("ago") > -1
-          ? parseTimeAgo(it["time"])
-          : new Date(it["time"]),
-      key: i,
-    }))
-    .map((it) => ({ ...it, excerpt: it["text"].slice(0, 500) }));
+    .map((it) => JSON.parse(it))
+    // .map((it, i) => ({
+    //   ...it,
+    //   time:
+    //     typeof it["time"].indexOf("ago") > -1
+    //       ? parseTimeAgo(it["time"])
+    //       : new Date(it["time"]),
+    // }))
+    .map((it, i) => ({ ...it, excerpt: it["text"].slice(0, 500), key: i }));
   // .filter((it) => Date.now() - it["time"].getTime() < 2 * timeUnits["week"]);
 
   const forAi = data.filter((it) => !it.ai);
@@ -184,7 +180,7 @@ ${JSON.stringify(chunks)}
 
           if (post_type !== "other") {
             console.log(data[key].time);
-            console.log(data[key].profile_link);
+            console.log(data[key].profile_link ?? data[key].links?.post);
             console.log(data[key].text);
             console.log("\n\n\n");
           }
@@ -194,7 +190,7 @@ ${JSON.stringify(chunks)}
   }
 
   await require("fs/promises").writeFile(
-    "./data/2024-11-26/linkedin-projects-ai.jsonl",
+    filePath,
     data.map((it) => JSON.stringify(it)).join("\n"),
     {
       encoding: "utf-8",
@@ -202,9 +198,9 @@ ${JSON.stringify(chunks)}
   );
 }
 
-async function sales_advice() {
+async function sales_advice(filePath) {
   const data = (
-    await require("fs/promises").readFile("./data/2024-11-27/x.jsonl", {
+    await require("fs/promises").readFile(filePath, {
       encoding: "utf-8",
     })
   )
@@ -252,7 +248,7 @@ If the user is complaining about their sking condition, help them and introduce 
   }
 
   await require("fs/promises").writeFile(
-    "./data/2024-11-27/x.jsonl",
+    filePath,
     data.map((it) => JSON.stringify(it)).join("\n"),
     {
       encoding: "utf-8",
