@@ -485,7 +485,7 @@ async function search_loop(terms) {
     let buttonsContainer = document.createElement("ul");
 
     buttonsContainer.style =
-      "position: absolute; top: 0; right: 0; width: 240px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
+      "position: absolute; top: 0; right: 0; width: 320px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
 
     document.body.appendChild(buttonsContainer);
 
@@ -522,8 +522,47 @@ async function search_loop(terms) {
     buttonsContainer.appendChild(dumpBtnElement);
     dumpBtnElement.addEventListener("click", bilbil_dump_click);
 
+    window.bilbil_dumpAlert_click = (ev) => {
+      bilbil_clear();
+      let agg = localStorage.getItem("bilbil_data");
+      if (!agg) return;
+      agg = JSON.parse(agg);
+      agg = agg.filter(
+        (it) => it.ai?.post_type && it.ai?.post_type !== "other" && !it.resolved
+      );
+      bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
+      if (statusElement.className === "bilbil_hidden") {
+        statusElement.className = "";
+      }
+    };
+    const dumpAlertBtnElement = document.createElement("li");
+    dumpAlertBtnElement.id = "bilbil_dumpAlert";
+    dumpAlertBtnElement.innerHTML = `<a class="global-nav__primary-link global-nav__primary-link" target="_self">DumpAlert</a>`;
+    buttonsContainer.appendChild(dumpAlertBtnElement);
+    dumpAlertBtnElement.addEventListener("click", bilbil_dumpAlert_click);
+
+    window.bilbil_resolveAlert_click = (ev) => {
+      bilbil_clear();
+      let agg = localStorage.getItem("bilbil_data");
+      if (!agg) return;
+      agg = JSON.parse(agg);
+      agg = agg.filter(
+        (it) => it.ai?.post_type && it.ai?.post_type !== "other" && !it.resolved
+      );
+      agg.forEach((it) => (it.resolved = true));
+      localStorage.setItem("bilbil_data", JSON.stringify(agg));
+      localStorage.setItem("bilbil_cnt_not_other", "0");
+      updateAlert();
+    };
+    const resolveAlertBtnElement = document.createElement("li");
+    resolveAlertBtnElement.id = "bilbil_resolveAlert";
+    resolveAlertBtnElement.innerHTML = `<a class="global-nav__primary-link global-nav__primary-link" target="_self">ResolveAlert</a>`;
+    buttonsContainer.appendChild(resolveAlertBtnElement);
+    resolveAlertBtnElement.addEventListener("click", bilbil_resolveAlert_click);
+
     window.bilbil_empty_click = (ev) => {
       bilbil_clear();
+      updateAlert();
       localStorage.removeItem("bilbil_data");
     };
     const emptyBtnElement = document.createElement("li");
@@ -532,6 +571,18 @@ async function search_loop(terms) {
     buttonsContainer.appendChild(emptyBtnElement);
     emptyBtnElement.addEventListener("click", bilbil_empty_click);
 
+    function keepAlive() {
+      chrome.runtime.sendMessage(
+        { action: "delay", ms: 10_000 },
+        (response) => {
+          bilbil_log("keepAlive");
+
+          keepAlive();
+        }
+      );
+    }
+
+    keepAlive();
     prepare();
     search_loop(['"پروژه" هوش مصنوعی "فارسی"', '"پروژه" AI', '"پروژه" NLP']);
   };
