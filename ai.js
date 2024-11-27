@@ -158,6 +158,7 @@ ${JSON.stringify(chunks)}
         response_format: txtAnalysisResponseFormat,
       });
 
+      cnt = 0;
       chunks = [];
 
       if (res.choices.length) {
