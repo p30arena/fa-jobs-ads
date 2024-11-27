@@ -58,20 +58,33 @@ async function test_classify_post() {
   )
     .split("\n")
     .filter((it) => it)
-    .map((it, i) => ({ ...JSON.parse(it), key: i }))
-    .map((it) => ({ ...it, time: parseTimeAgo(it["time"]) }))
+    .map((it, i) => JSON.parse(it))
+    .map((it, i) => ({
+      ...it,
+      time:
+        typeof it["time"].indexOf("ago") > -1
+          ? parseTimeAgo(it["time"])
+          : new Date(it["time"]),
+      key: i,
+    }))
     .map((it) => ({ ...it, excerpt: it["text"].slice(0, 500) }));
   // .filter((it) => Date.now() - it["time"].getTime() < 2 * timeUnits["week"]);
+
+  const forAi = data.filter((it) => !it.ai);
+
+  if (!forAi.length) return;
+
+  console.log("start");
 
   let chunks = [];
   let cnt = 0;
   let i = 0;
 
-  for (const item of data) {
+  for (const item of forAi) {
     chunks.push({ key: item.key, text: item.excerpt });
     cnt += item.text.length;
 
-    if (cnt > MAX_TOKENS / 2 || i++ == data.length - 1) {
+    if (cnt > MAX_TOKENS / 2 || i++ == forAi.length - 1) {
       const res = await client.beta.chat.completions.parse({
         messages: [
           {
@@ -80,26 +93,28 @@ async function test_classify_post() {
 You are a classifier analyzing LinkedIn posts to categorize them into specific types. Your goal is to classify each post as either:
 
 1. "job_posting": Posts explicitly advertising job openings. These posts include:
-   - Keywords such as "hiring," "position available," "we’re looking for," or "apply now."
-   - Include specific job roles, locations, qualifications, or application instructions.
+  - Keywords such as "hiring," "position available," "we’re looking for," or "apply now."
+  - Include specific job roles, locations, qualifications, or application instructions.
 
 2. "contract_project": Posts explicitly offering freelance, consulting, or contract-based opportunities. These posts include:
-   - Keywords like "freelance," "short-term project," "contract opportunity," or "remote work."
-   - A clear offer to engage in a paid, task-specific arrangement.
+  - Keywords like "freelance," "short-term project," "contract opportunity," or "remote work."
+  - A clear offer to engage in a paid, task-specific arrangement.
 
 3. "other": Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
-   - Personal or team updates, such as starting, working on, or completing a project.
-   - Personal updates or experiences.
-   - Sharing professional frustrations or challenges.
-   - Posts sharing tools, tutorials, or non-commercial initiatives.
-   - General discussions about technology, achievements, or learning experiences.
-   - Advertising the author’s own skills or services without offering a role or opportunity.
-   - Inviting general discussions, collaborations, or non-commercial contributions.
-   - Invitations to participate in unpaid projects, community initiatives, or open-source collaborations.
-   - Posts inviting general discussions, collaboration, or feedback without offering a paid opportunity.
-   - Promoting tools, research, or volunteer opportunities without financial compensation.
+  - Authors seeking jobs or projects (e.g., "I am looking for a role in...").
+  - Personal or team updates, such as starting, working on, or completing a project.
+  - Personal updates or experiences.
+  - Sharing professional frustrations or challenges.
+  - Posts sharing tools, tutorials, or non-commercial initiatives.
+  - General discussions about technology, achievements, or learning experiences.
+  - Advertising the author’s own skills or services without offering a role or opportunity.
+  - Inviting general discussions, collaborations, or non-commercial contributions.
+  - Invitations to participate in unpaid projects, community initiatives, or open-source collaborations.
+  - Posts inviting general discussions, collaboration, or feedback without offering a paid opportunity.
+  - Promoting tools, research, or volunteer opportunities without financial compensation.
 
 Special Instructions:
+- Posts where the author is seeking a job or project opportunity (e.g., "I am looking for a role as...") must always be classified as "other."
 - Posts where the author is promoting their own services (e.g., "I am open to projects in X") should always be classified as "other."
 - Posts inviting unpaid contributions or volunteer work (e.g., "participate in our research project" or "help build a community database") should always be classified as "other."
 - Posts describing community-driven or open-source projects should be classified as "other."
@@ -114,43 +129,43 @@ Example:
 
 Input:
 [
-    {
-        "key": 0,
-        "text": "We're hiring a software engineer to join our team in San Francisco. Apply now!"
-    },
-    {
-        "key": 1,
-        "text": "Looking for a freelancer to help with a short-term mobile app development project. Remote work."
-    },
-    {
-        "key": 2,
-        "text": "Excited to share my thoughts on leadership in the tech industry."
-    }
+  {
+      "key": 0,
+      "text": "We're hiring a software engineer to join our team in San Francisco. Apply now!"
+  },
+  {
+      "key": 1,
+      "text": "Looking for a freelancer to help with a short-term mobile app development project. Remote work."
+  },
+  {
+      "key": 2,
+      "text": "Excited to share my thoughts on leadership in the tech industry."
+  }
 ]
 
 
 Output:
 {
-    "result": [
-        {
-            "key": 0,
-            "post_type": "job_posting"
-        },
-        {
-            "key": 1,
-            "post_type": "contract_project"
-        },
-        {
-            "key": 2,
-            "post_type": "other"
-        }
-    ]
+  "result": [
+      {
+          "key": 0,
+          "post_type": "job_posting"
+      },
+      {
+          "key": 1,
+          "post_type": "contract_project"
+      },
+      {
+          "key": 2,
+          "post_type": "other"
+      }
+  ]
 }
 
 
 Task:
 
-Please classify the following posts:  
+Please classify the following posts and return the Output JSON:
 ${JSON.stringify(chunks)}
         `,
           },
@@ -165,7 +180,9 @@ ${JSON.stringify(chunks)}
 
       if (res.choices.length) {
         for (const { key, post_type } of res.choices[0].message.parsed.result) {
-          if (["job_posting", "contract_project"].indexOf(post_type) > -1) {
+          data[key].ai = { post_type };
+
+          if (post_type !== "other") {
             console.log(data[key].time);
             console.log(data[key].profile_link);
             console.log(data[key].text);
@@ -175,6 +192,14 @@ ${JSON.stringify(chunks)}
       }
     }
   }
+
+  await require("fs/promises").writeFile(
+    "./data/2024-11-26/linkedin-projects-ai.jsonl",
+    data.map((it) => JSON.stringify(it)).join("\n"),
+    {
+      encoding: "utf-8",
+    }
+  );
 }
 
 async function sales_advice() {
@@ -187,7 +212,13 @@ async function sales_advice() {
     .filter((it) => it)
     .map((it) => JSON.parse(it));
 
-  for (const item of data) {
+  const forAi = data.filter((it) => !it.ai);
+
+  if (!forAi.length) return;
+
+  console.log("start");
+
+  for (const item of forAi) {
     try {
       const res = await client.chat.completions.create({
         model: "gpt-4o-mini",
