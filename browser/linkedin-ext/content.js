@@ -215,7 +215,7 @@ async function delay(ms) {
 function prepare() {
   const s = document.createElement("style");
   s.textContent =
-    ".bilbil_hidden {visibility: hidden;} .bilbil_alert{background-color: red;}";
+    ".bilbil_hidden {visibility: hidden;} .bilbil_alert{background-color: red !important;}";
   document.head.appendChild(s);
 
   document.body.appendChild(statusElement);
@@ -230,7 +230,7 @@ function prepare() {
     "width: 500px; height: 500px; position: absolute; top: 0; left: 0; z-index: 999; background-color: #ffffffee; overflow: scroll;";
 }
 
-async function search(terms) {
+async function search(terms, MAX_DEPTH = 10) {
   let agg = [];
 
   for (const search of terms) {
@@ -251,8 +251,6 @@ async function search(terms) {
           ifr.contentDocument.head.appendChild(style);
 
           try {
-            const MAX_DEPTH = 3;
-
             const moreBtn = () =>
               ifr.contentDocument.querySelector(
                 ".scaffold-finite-scroll__load-button"
@@ -435,21 +433,7 @@ async function search(terms) {
   }
 }
 
-async function search_loop(terms) {
-  const RUN_DELAY = 300_000;
-
-  let lastRun = localStorage.getItem("bilbil_last_run");
-  if (lastRun) {
-    lastRun = new Date(lastRun);
-    const diff = Date.now() - lastRun.getTime();
-
-    if (RUN_DELAY > diff) {
-      await delay(RUN_DELAY - diff);
-    }
-  }
-
-  await search(terms);
-
+function updateAlert() {
   let cntNotOther = localStorage.getItem("bilbil_cnt_not_other");
   if (cntNotOther) {
     cntNotOther = Number(cntNotOther);
@@ -459,6 +443,29 @@ async function search_loop(terms) {
       buttonsContainer.className = "";
     }
   }
+}
+
+async function search_loop(terms) {
+  const RUN_DELAY = 300_000;
+
+  updateAlert();
+
+  let lastRunLessThanDay = false;
+  let lastRun = localStorage.getItem("bilbil_last_run");
+  if (lastRun) {
+    lastRun = new Date(lastRun);
+    const diff = Date.now() - lastRun.getTime();
+
+    lastRunLessThanDay = diff < timeUnits["day"];
+
+    if (RUN_DELAY > diff) {
+      await delay(RUN_DELAY - diff);
+    }
+  }
+
+  await search(terms, lastRunLessThanDay ? 3 : 10);
+
+  updateAlert();
 
   localStorage.setItem("bilbil_last_run", new Date().toISOString());
 
