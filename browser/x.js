@@ -1,10 +1,11 @@
 // https://x.com/search?f=live&q=%D8%AC%D9%88%D8%B4%20%D8%B5%D9%88%D8%B1%D8%AA%20lang%3Afa%20-filter%3Alinks%20-filter%3Areplies&src=typed_query
+// https://x.com/search?q=(%23%D9%BE%D8%B1%D9%88%DA%98%D9%87%20OR%20%23%D8%A7%D8%B3%D8%AA%D8%AE%D8%AF%D8%A7%D9%85%20OR%20%23%D8%A8%D8%B1%D9%86%D8%A7%D9%85%D9%87_%D9%86%D9%88%DB%8C%D8%B3%20OR%20%23%D9%87%D9%88%D8%B4_%D9%85%D8%B5%D9%86%D9%88%D8%B9%DB%8C)%20lang%3Afa%20-filter%3Alinks%20-filter%3Areplies&src=typed_query&f=live
 
 const count_articles = () => document.querySelectorAll("article").length;
 const progressbar = () => document.querySelector('div[role="progressbar"]');
 const retry_btn = () =>
   document.querySelector(
-    'div[aria-label="Timeline: Search timeline"] > div > div:last-child button[role="button"]'
+    'div[aria-label="Timeline: Search timeline"] > div > div:last-child button[role="button"]:not([aria-label])'
   );
 
 async function delay(ms) {
@@ -42,29 +43,32 @@ const extract = () => {
   let page = 1;
   let agg = [];
 
+  let scrollTop = 0;
   while (page++ < MAX_DEPTH) {
     const data = extract();
     if (!data.length) {
+      console.log("!data.length");
       break;
     }
 
-    if (
-      agg.length &&
-      data[data.length - 1].links.post === agg[agg.length - 1].links.post
-    ) {
+    if (scrollTop == document.body.scrollHeight) {
+      console.log("scrollTop");
       break;
     }
 
     agg = [...agg, ...data];
 
     window.scrollTo(0, document.body.scrollHeight);
+    scrollTop = document.body.scrollHeight;
     await delay(1000);
 
     while (progressbar()) {
       await delay(1000);
     }
+    await delay(1000);
 
     if (retry_btn()) {
+      console.log("retry_btn");
       break;
     }
   }

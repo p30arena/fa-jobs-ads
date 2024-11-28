@@ -467,7 +467,13 @@ function updateAlert() {
 
 async function search_loop(terms) {
   try {
-    const RUN_DELAY = 300_000;
+    let tmp_run_delay;
+    const RUN_DELAY =
+      ((tmp_run_delay = localStorage.getItem("bilbil_run_delay")),
+      tmp_run_delay ? Number(tmp_run_delay) : null) ?? 300_000;
+
+    bilbil_log("run_delay: ", RUN_DELAY);
+
     document.body.setAttribute("bilbil_loop_running", "true");
 
     updateAlert();
