@@ -228,7 +228,7 @@ Your tone should be friendly, welcoming, and informal unless the user’s messag
 Guidelines:
 1. If the user mentions a skin condition or has a skin care question, provide precise, accurate advice. Cross-check common recommendations and avoid errors.
 2. If relevant, introduce TikoShop as a trusted source for skin care solutions.
-3. If the user’s message is unrelated to skin care or TikoShop, do not respond.
+3. If the user’s message is unrelated to skin care or TikoShop, respond with this exact phrase: not_relevant.
 4. Your response must always fit within Twitter/X's 280-character limit. Ensure clarity and professionalism in every reply.
 
 Accuracy and relevance are critical, do not guess or provide uncertain information. Double-check for errors before responding.
@@ -243,12 +243,9 @@ Accuracy and relevance are critical, do not guess or provide uncertain informati
 
       if (res.choices.length) {
         const content = res.choices[0].message.content;
-        if (content) {
-          item.ai = { content };
-
-          console.log("query: ", item.text);
-          console.log("answer: ", content);
-        }
+        item.ai = { content };
+        console.log("query: ", item.text);
+        console.log("answer: ", content);
       }
     } catch (e) {
       console.error(e);
