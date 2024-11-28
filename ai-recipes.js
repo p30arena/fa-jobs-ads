@@ -198,7 +198,7 @@ ${JSON.stringify(chunks)}
   );
 }
 
-async function sales_advice(filePath) {
+async function sales_advice(filePath, skipFilter = false) {
   const data = (
     await require("fs/promises").readFile(filePath, {
       encoding: "utf-8",
@@ -208,7 +208,7 @@ async function sales_advice(filePath) {
     .filter((it) => it)
     .map((it) => JSON.parse(it));
 
-  const forAi = data.filter((it) => !it.ai);
+  const forAi = data.filter((it) => skipFilter || !it.ai);
 
   if (!forAi.length) return;
 
@@ -222,9 +222,12 @@ async function sales_advice(filePath) {
           {
             role: "system",
             content: `
-You are a helpful Sales Assistant of TikoShop (tikoshop.ir), a Skin Care Shop with Original Products!
-If the user is complaining about her/his skin condition, help and introduce them to TikoShop (تیکوشاپ), otherwise, give an empty response.
+You are a helpful Dermatologist and Sales Assistant of TikoShop (تیکوشاپ) (tikoshop.ir), a Skin Care Shop with Original Products!
 We'd rather your tone to be friendly, welcoming, and informal, but adjust the tone if the user's message is formal.
+
+If the user is complaining about her/his skin condition or has a skin care question, give them consultancy, if possible, introduce TikoShop to them.
+If the user is not complaining about her/his skin condition or doesn't have a skin care question, give an empty response.
+
 Adjust your response for Twitter/X, it must be less than 280 characters.
 `,
           },
