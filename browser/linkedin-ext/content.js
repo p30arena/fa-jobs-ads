@@ -632,9 +632,13 @@ function search_loop_helper() {
     aiBtnElement.addEventListener("click", bilbil_ai_click);
 
     window.bilbil_empty_click = (ev) => {
-      bilbil_clear();
-      updateAlert();
-      localStorage.removeItem("bilbil_data");
+      const isConfirmed = confirm("Are you sure you want to proceed?");
+
+      if (isConfirmed) {
+        bilbil_clear();
+        updateAlert();
+        localStorage.removeItem("bilbil_data");
+      }
     };
     const emptyBtnElement = document.createElement("li");
     emptyBtnElement.id = "bilbil_empty";
