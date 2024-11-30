@@ -879,9 +879,9 @@ function sendMessageToBot(message) {
     if (get_container()) {
       mutationInstance.disconnect();
       if (!get_toggle_btn()) {
-        setMainBotChat();
         const shouldInject = confirm("Inject Script?");
         if (shouldInject) {
+          setMainBotChat();
           inject();
         }
       } else {
