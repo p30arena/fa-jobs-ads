@@ -24,6 +24,45 @@ function bilbil_clear() {
   setTimeout(() => statusElement.scrollTo(0, 0), 0);
 }
 
+async function complete_coversation(api_key, context, conversation) {
+  if (!conversation) return "";
+  if (!api_key) return new Promise((s, f) => f("api_key"));
+
+  try {
+    let res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${api_key}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `
+${context}
+
+This a Conversation between two peers, give an appropriate response to the conversation as the responding peer in the conversation.
+Don't use the phrase "### User n:" (n is the user number) in your response.
+
+Conversation:
+
+${conversation}`,
+          },
+        ],
+        temperature: 0,
+      }),
+    });
+
+    res = await res.json();
+
+    return res.choices?.[0]?.message?.content ?? "";
+  } catch (e) {
+    bilbil_error(e);
+  }
+}
+
 async function prompt_ai(api_key, data) {
   if (!data.length) return [];
 
@@ -534,6 +573,135 @@ function search_loop_helper() {
   }
 }
 
+async function helper_complete_coversation(conversation) {
+  bilbil_log("complete coversation");
+
+  try {
+    const r = await complete_coversation(
+      localStorage.getItem("bilbil_api_key"),
+      "",
+      conversation
+    );
+
+    bilbil_log("got response");
+
+    return r;
+  } catch (e) {
+    if (e === "api_key") {
+      bilbil_error("must define api_key");
+    } else {
+      bilbil_error(e);
+    }
+  }
+}
+
+const handleMessageBox = async () => {
+  const getMessageFooter = () =>
+    document.querySelector(
+      "div[data-msg-overlay-conversation-bubble-open] footer"
+    );
+
+  const getMessagesContainer = () =>
+    document.querySelector(
+      "div[data-msg-overlay-conversation-bubble-open] .msg-s-message-list.scrollable"
+    );
+
+  const getMessagesProgress = () =>
+    document
+      .querySelector(
+        "div[data-msg-overlay-conversation-bubble-open] li.msg-s-message-list__loader"
+      )
+      ?.checkVisibility();
+
+  const listMessages = () => {
+    const messages = [
+      ...document.querySelectorAll(
+        "div[data-msg-overlay-conversation-bubble-open] div.msg-s-event-listitem"
+      ),
+    ].map((msg, i) => ({
+      peer: msg.querySelector("a")?.href,
+      msg: [...msg.querySelectorAll("p")].map((it) => it.innerText).join("\n"),
+    }));
+
+    const nearestPeer = (idx) => {
+      for (let i = idx - 1; idx >= 0; idx--) {
+        if (messages[i].peer) {
+          return messages[i].peer;
+        }
+      }
+    };
+
+    messages.forEach((m, i) => (m.peer = m.peer ?? nearestPeer(i)));
+
+    const users_numbers = messages.reduce((o, item) => {
+      if (item.peer && !o[item.peer]) {
+        o[item.peer] = Object.keys(o).length + 1;
+      }
+      return o;
+    }, {});
+
+    messages.forEach((m, i) => (m.peer_number = users_numbers[m.peer]));
+
+    return messages;
+  };
+
+  const headCircle = () =>
+    document.querySelector(
+      "div[data-msg-overlay-conversation-bubble-open] .artdeco-entity-lockup__image"
+    );
+
+  const dispatchPaste = (
+    text,
+    target = document.querySelector(".msg-form__contenteditable p")
+  ) => {
+    const dataTransfer = new DataTransfer();
+    // this may be 'text/html' if it's required
+    dataTransfer.setData("text/plain", text);
+
+    target.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: dataTransfer,
+
+        // need these for the event to reach Draft paste handler
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    // clear DataTransfer Data
+    dataTransfer.clearData();
+  };
+
+  let scrollTop = 0;
+
+  while (!headCircle()) {
+    scrollTop -= 1000;
+    getMessagesContainer().scrollTo(0, scrollTop);
+
+    await delay(1000);
+
+    const MAX_TRIES = 10;
+    let cnt_tries = 0;
+    while (getMessagesProgress() && cnt_tries++ < MAX_TRIES) {
+      await delay(1000);
+    }
+
+    if (getMessagesProgress()) {
+      break;
+    }
+  }
+
+  const conversation = listMessages()
+    .map((it) => "### User" + it.peer_number + ":\n" + it.msg + "\n")
+    .join("\n\n");
+
+  const response = await helper_complete_coversation(conversation);
+
+  if (response) {
+    dispatchPaste(response);
+  }
+};
+
 (() => {
   const get_container = () =>
     document.querySelector(".global-nav__primary-items");
@@ -545,7 +713,7 @@ function search_loop_helper() {
     let buttonsContainer = document.createElement("ul");
 
     buttonsContainer.style =
-      "position: absolute; top: 0; right: 0; width: 480px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
+      "position: absolute; top: 0; right: 0; width: 560px; height: 52px; background-color: #fff; display: flex; z-index: 999; list-style: none;";
 
     document.body.appendChild(buttonsContainer);
 
@@ -645,6 +813,13 @@ function search_loop_helper() {
     emptyBtnElement.innerHTML = `<a class="global-nav__primary-link global-nav__primary-link" target="_self">Empty</a>`;
     buttonsContainer.appendChild(emptyBtnElement);
     emptyBtnElement.addEventListener("click", bilbil_empty_click);
+
+    window.bilbil_msgbox_click = handleMessageBox;
+    const msgboxBtnElement = document.createElement("li");
+    msgboxBtnElement.id = "bilbil_msgbox";
+    msgboxBtnElement.innerHTML = `<a class="global-nav__primary-link global-nav__primary-link" target="_self">Message Box</a>`;
+    buttonsContainer.appendChild(msgboxBtnElement);
+    msgboxBtnElement.addEventListener("click", bilbil_msgbox_click);
 
     prepare_ui();
 
