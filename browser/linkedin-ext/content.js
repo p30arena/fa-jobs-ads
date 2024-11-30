@@ -281,8 +281,8 @@ Please classify the following posts and return the Output JSON:
     ifr.width = "1400px";
     ifr.height = "700px";
 
-    ifr.style =
-      "visibility: hidden; position: absolute; top: 0; left: 0; z-index: -1;";
+    // setting "visibility: hidden" caused elements not to render?!
+    ifr.style = "position: absolute; top: 0; left: 0; z-index: -1;";
     statusElement.style =
       "width: 500px; height: 500px; position: absolute; top: 0; left: 0; z-index: 999; background-color: #ffffffee; overflow: scroll;";
   }
