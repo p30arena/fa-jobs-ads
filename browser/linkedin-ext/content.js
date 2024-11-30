@@ -24,7 +24,7 @@ function bilbil_clear() {
   setTimeout(() => statusElement.scrollTo(0, 0), 0);
 }
 
-async function complete_coversation(api_key, context, conversation) {
+async function complete_coversation(api_key, context, conversation, guide) {
   if (!conversation) return "";
   if (!api_key) return new Promise((s, f) => f("api_key"));
 
@@ -45,7 +45,15 @@ ${context}
 
 This a Conversation between two peers, give an appropriate response to the conversation as the responding peer in the conversation.
 Don't use the phrase "### User n:" (n is the user number) in your response.
+${
+  guide
+    ? `
 
+Response Guide: ${guide}
+
+`
+    : ""
+}
 Conversation:
 
 ${conversation}`,
@@ -573,14 +581,15 @@ function search_loop_helper() {
   }
 }
 
-async function helper_complete_coversation(conversation) {
+async function helper_complete_coversation(conversation, guide) {
   bilbil_log("complete coversation");
 
   try {
     const r = await complete_coversation(
       localStorage.getItem("bilbil_api_key"),
       "",
-      conversation
+      conversation,
+      guide
     );
 
     bilbil_log("got response");
@@ -672,23 +681,27 @@ const handleMessageBox = async () => {
     dataTransfer.clearData();
   };
 
-  let scrollTop = 0;
-  let nScrolls = 0;
-  const MAX_SCROLLS = 5;
-  while (!headCircle() || nScrolls++ < MAX_SCROLLS) {
-    scrollTop -= 1000;
-    getMessagesContainer().scrollTo(0, scrollTop);
+  const doScroll = confirm("Should I Scroll?");
 
-    await delay(1000);
+  if (doScroll) {
+    let scrollTop = 0;
+    let nScrolls = 0;
+    const MAX_SCROLLS = 5;
+    while (!headCircle() || nScrolls++ < MAX_SCROLLS) {
+      scrollTop -= 1000;
+      getMessagesContainer().scrollTo(0, scrollTop);
 
-    const MAX_TRIES = 10;
-    let cnt_tries = 0;
-    while (getMessagesProgress() && cnt_tries++ < MAX_TRIES) {
       await delay(1000);
-    }
 
-    if (getMessagesProgress()) {
-      break;
+      const MAX_TRIES = 10;
+      let cnt_tries = 0;
+      while (getMessagesProgress() && cnt_tries++ < MAX_TRIES) {
+        await delay(1000);
+      }
+
+      if (getMessagesProgress()) {
+        break;
+      }
     }
   }
 
@@ -696,7 +709,9 @@ const handleMessageBox = async () => {
     .map((it) => "### User" + it.peer_number + ":\n" + it.msg + "\n")
     .join("\n\n");
 
-  const response = await helper_complete_coversation(conversation);
+  const guide = prompt("Response Guide");
+
+  const response = await helper_complete_coversation(conversation, guide);
 
   if (response) {
     dispatchPaste(response);
