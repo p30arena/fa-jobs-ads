@@ -673,8 +673,9 @@ const handleMessageBox = async () => {
   };
 
   let scrollTop = 0;
-
-  while (!headCircle()) {
+  let nScrolls = 0;
+  const MAX_SCROLLS = 5;
+  while (!headCircle() || nScrolls++ < MAX_SCROLLS) {
     scrollTop -= 1000;
     getMessagesContainer().scrollTo(0, scrollTop);
 
