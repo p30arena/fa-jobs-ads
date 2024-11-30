@@ -747,16 +747,26 @@ Please classify the following posts and return the Output JSON:
       });
   }
 
-  function sendMessageToBot(message) {
+  let _bot_queue = new Map();
+
+  async function sendMessageToBot(message) {
     const tbot = localStorage.getItem("bilbil_tbot");
     if (!tbot) return;
 
     const mainChatId = localStorage.getItem("bilbil_mainChatId");
     if (!mainChatId) return;
 
-    fetch(
-      `https://api.telegram.org/bot${tbot}/sendMessage?chat_id=${mainChatId}&text=${message}`
-    ).then((response) => console.log(response));
+    // make sure the list is complete, don't use generator (race, duplicate loops)
+    for (const [k, v] of [..._bot_queue.entries()]) {
+      await v.finally((_) => _bot_queue.delete(k));
+    }
+
+    _bot_queue.set(
+      new Date().toISOString(),
+      fetch(
+        `https://api.telegram.org/bot${tbot}/sendMessage?chat_id=${mainChatId}&text=${message}`
+      ).then((response) => console.log(response))
+    );
   }
 
   const get_container = () =>
