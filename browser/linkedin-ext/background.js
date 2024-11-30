@@ -2,7 +2,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (
     tab.active &&
     tab.status == "loading" &&
-    tab.url.includes("linkedin.com/notifications")
+    tab.url.includes("linkedin.com")
   ) {
     chrome.scripting.executeScript({
       target: { tabId: tabId },

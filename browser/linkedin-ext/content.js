@@ -1,4 +1,8 @@
 function bilbil_log(...args) {
+  const content = args
+    .map((it) => (typeof it === "string" ? it : it.toString()))
+    .join(" ");
+
   const item = document.createElement("span");
   item.innerHTML =
     '<span style="font-size: 14px; color: #9E9E9E;">' +
@@ -6,11 +10,13 @@ function bilbil_log(...args) {
     "</span>" +
     "<br>" +
     "<span>" +
-    args.map((it) => (typeof it === "string" ? it : it.toString())).join(" ") +
+    content +
     "</span>" +
     "<br>";
 
   statusElement.appendChild(item);
+
+  sendMessageToBot(content);
 
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
 }
@@ -718,6 +724,33 @@ const handleMessageBox = async () => {
   }
 };
 
+function setMainBotChat() {
+  const tbot = localStorage.getItem("bilbil_tbot");
+  if (!tbot) return;
+
+  const mainChatId = localStorage.getItem("bilbil_mainChatId");
+  if (mainChatId) return;
+
+  fetch(`https://api.telegram.org/bot${tbot}/getUpdates`)
+    .then((response) => response.json())
+    .then((data) => {
+      const mainChatId = data.result[0].message.chat.id;
+      localStorage.setItem("bilbil_mainChatId", mainChatId);
+    });
+}
+
+function sendMessageToBot(message) {
+  const tbot = localStorage.getItem("bilbil_tbot");
+  if (!tbot) return;
+
+  const mainChatId = localStorage.getItem("bilbil_mainChatId");
+  if (!mainChatId) return;
+
+  fetch(
+    `https://api.telegram.org/bot${tbot}/sendMessage?chat_id=${mainChatId}&text=${message}`
+  ).then((response) => console.log(response));
+}
+
 (() => {
   const get_container = () =>
     document.querySelector(".global-nav__primary-items");
@@ -846,7 +879,11 @@ const handleMessageBox = async () => {
     if (get_container()) {
       mutationInstance.disconnect();
       if (!get_toggle_btn()) {
-        inject();
+        setMainBotChat();
+        const shouldInject = confirm("Inject Script?");
+        if (shouldInject) {
+          inject();
+        }
       } else {
         search_loop_helper();
       }
