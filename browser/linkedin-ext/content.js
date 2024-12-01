@@ -903,17 +903,18 @@ Please classify the following posts and return the Output JSON:
     search_loop_helper();
   };
 
-  const observer = new MutationObserver(function (mutations, mutationInstance) {
+  const observer = new MutationObserver((mutations, mutationInstance) => {
     if (get_container()) {
       mutationInstance.disconnect();
-      if (!get_toggle_btn()) {
+
+      if (!document.body.hasAttribute("bilbil_obs")) {
+        document.body.setAttribute("bilbil_obs", "true");
+
         const shouldInject = confirm("Inject Script?");
         if (shouldInject) {
           setMainBotChat();
           inject();
         }
-      } else {
-        search_loop_helper();
       }
     }
   });
