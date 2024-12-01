@@ -61,14 +61,33 @@
 
     localStorage.setItem("bilbil_search_items_head_idx", terms_head_idx + 1);
 
+    async function progressWaiter() {
+      let n_wait_progress = 0;
+      while (progressbar() && n_wait_progress++ < MAX_WAIT_PROGRESS) {
+        await delay(1000);
+      }
+
+      if (progressbar()) {
+        return true;
+      }
+
+      await delay(1000);
+
+      if (retry_btn()) {
+        bilbil_log("retry_btn");
+        return true;
+      }
+    }
+
     const MAX_DEPTH = 10;
+    const MAX_WAIT_PROGRESS = 15;
     let page = 1;
     let agg = [];
 
     let scrollTop = 0;
     while (page++ < MAX_DEPTH) {
-      while (progressbar()) {
-        await delay(1000);
+      if (await progressWaiter()) {
+        break;
       }
 
       const data = extract();
@@ -88,13 +107,7 @@
       scrollTop = document.body.scrollHeight;
       await delay(1000);
 
-      while (progressbar()) {
-        await delay(1000);
-      }
-      await delay(1000);
-
-      if (retry_btn()) {
-        bilbil_log("retry_btn");
+      if (await progressWaiter()) {
         break;
       }
     }
