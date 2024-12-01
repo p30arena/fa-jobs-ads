@@ -776,9 +776,13 @@ Please classify the following posts and return the Output JSON:
     const mainChatId = localStorage.getItem("bilbil_mainChatId");
     if (!mainChatId) return;
 
-    // make sure the list is complete, don't use generator (race, duplicate loops)
-    for (const [k, v] of [..._bot_queue.entries()]) {
-      await v.finally((_) => _bot_queue.delete(k));
+    const keysToRemove = [];
+    for (const [k, v] of _bot_queue.entries()) {
+      await v.finally((_) => keysToRemove.push(k));
+    }
+
+    for (const k of keysToRemove) {
+      _bot_queue.delete(k);
     }
 
     _bot_queue.set(
