@@ -534,7 +534,14 @@ Please classify the following posts and return the Output JSON:
     }
   }
 
-  async function search_loop(terms) {
+  async function search_loop() {
+    let terms = localStorage.getItem("bilbil_search_items");
+    if (!terms) {
+      return bilbil_error("you have to specify bilbil_search_items");
+    }
+
+    terms = JSON.parse(terms);
+
     try {
       let tmp_run_delay;
       const RUN_DELAY =
@@ -566,7 +573,7 @@ Please classify the following posts and return the Output JSON:
 
       await delay(RUN_DELAY);
 
-      search_loop(terms);
+      search_loop();
     } catch (e) {
       document.body.setAttribute("bilbil_loop_running", "false");
       bilbil_error(e);
@@ -596,11 +603,7 @@ Please classify the following posts and return the Output JSON:
     }
 
     if (document.body.getAttribute("bilbil_loop_running") !== "true") {
-      search_loop([
-        '"پروژه" ("AI" OR "NLP" OR "هوش مصنوعی" OR "VISION")',
-        '("پروژه موبایل" OR "پروژه وب" OR "توسعه دهنده" OR "مهندس نرم افزار")',
-        '("پروژه همکاری" OR "فرصت شغلی" OR "تیم توسعه")',
-      ]);
+      search_loop();
     }
   }
 
