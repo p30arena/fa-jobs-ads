@@ -584,11 +584,9 @@ Please classify the following posts and return the Output JSON:
 
     if (document.body.getAttribute("bilbil_loop_running") !== "true") {
       search_loop([
-        '"پروژه" هوش مصنوعی "فارسی"',
-        '"پروژه" AI',
-        '"پروژه" NLP',
-        '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") هوش مصنوعی',
-        '("پروژه همکاری" OR "فرصت شغلی" OR "دنبال تیم") (وب OR موبایل)',
+        '"پروژه" ("AI" OR "NLP" OR "هوش مصنوعی" OR "VISION")',
+        '("پروژه موبایل" OR "پروژه وب" OR "توسعه دهنده" OR "مهندس نرم افزار")',
+        '("پروژه همکاری" OR "فرصت شغلی" OR "تیم توسعه")',
       ]);
     }
   }
