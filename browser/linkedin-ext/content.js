@@ -72,7 +72,16 @@ ${conversation}`,
 
       res = await res.json();
 
-      return res.choices?.[0]?.message?.content ?? "";
+      if (res.error) {
+        throw res.error;
+      }
+
+      const resMsg = res.choices?.[0]?.message?.content ?? "";
+      if (!resMsg) {
+        bilbil_log(JSON.stringify(res));
+      }
+
+      return resMsg;
     } catch (e) {
       bilbil_error(e);
     }
@@ -205,6 +214,10 @@ Please classify the following posts and return the Output JSON:
           chunks = [];
 
           res = await res.json();
+
+          if (res.error) {
+            throw res.error;
+          }
 
           agg = [
             ...agg,
@@ -691,6 +704,15 @@ Please classify the following posts and return the Output JSON:
 
       // clear DataTransfer Data
       dataTransfer.clearData();
+
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          bilbil_log("clipboard set");
+        })
+        .catch((r) => {
+          bilbil_error("clipboard error: ", e);
+        });
     };
 
     const doScroll = confirm("Should I Scroll?");
