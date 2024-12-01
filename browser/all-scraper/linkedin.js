@@ -192,6 +192,10 @@
 
     terms = JSON.parse(terms);
 
+    if (!terms.length) {
+      return bilbil_error("you have to specify bilbil_search_items");
+    }
+
     try {
       let tmp_run_delay;
       const RUN_DELAY =

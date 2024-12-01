@@ -2,6 +2,7 @@ const execTabs = new Set();
 
 const linkedinTabKey = (tabId) => "linkedin_" + tabId;
 const xTabKey = (tabId) => "x_" + tabId;
+let x_loop = false;
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (
@@ -28,7 +29,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
   }
 
-  if (tab.active && tab.status == "loading" && tab.url.includes("x.com")) {
+  if (
+    tab.active &&
+    tab.status == "loading" &&
+    (x_loop
+      ? tab.url.includes("/x.com")
+      : tab.url.includes("/x.com/notifications"))
+  ) {
     if (!execTabs.has(xTabKey(tabId))) {
       execTabs.add(xTabKey(tabId));
       chrome.scripting.executeScript({
@@ -38,7 +45,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
   }
 
-  if (tab.active && tab.status == "complete" && tab.url.includes("x.com")) {
+  if (
+    tab.active &&
+    tab.status == "complete" &&
+    (x_loop
+      ? tab.url.includes("/x.com")
+      : tab.url.includes("/x.com/notifications"))
+  ) {
     if (execTabs.has(xTabKey(tabId))) {
       execTabs.delete(xTabKey(tabId));
     }
@@ -52,5 +65,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }, message.ms);
 
     return true; // Indicates the response will be sent asynchronously
+  }
+
+  if (message.action === "x_loop") {
+    x_loop = true;
+  }
+
+  if (message.action === "x_loop_end") {
+    x_loop = false;
   }
 });
