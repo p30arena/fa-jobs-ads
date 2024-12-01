@@ -26,6 +26,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       execTabs.delete(linkedinTabKey(tabId));
     }
   }
+
+  if (tab.active && tab.status == "complete" && tab.url.includes("x.com")) {
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ["general.js", "x.js"],
+    });
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
