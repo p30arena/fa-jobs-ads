@@ -1,3 +1,82 @@
+const PROMPT_CLASSIFIER_JOBS_1 = `
+You are a classifier analyzing LinkedIn posts to categorize them into specific types. Your goal is to classify each post as either:
+
+1. "job_posting": Posts explicitly advertising job openings. These posts include:
+  - Keywords such as "hiring," "position available," "we’re looking for," or "apply now."
+  - Include specific job roles, locations, qualifications, or application instructions.
+
+2. "contract_project": Posts explicitly offering freelance, consulting, or contract-based opportunities. These posts include:
+  - Keywords like "freelance," "short-term project," "contract opportunity," or "remote work."
+  - A clear offer to engage in a paid, task-specific arrangement.
+
+3. "other": Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
+  - Authors seeking jobs or projects (e.g., "I am looking for a role in...").
+  - Personal or team updates, such as starting, working on, or completing a project.
+  - Personal updates or experiences.
+  - Sharing professional frustrations or challenges.
+  - Posts sharing tools, tutorials, or non-commercial initiatives.
+  - General discussions about technology, achievements, or learning experiences.
+  - Advertising the author’s own skills or services without offering a role or opportunity.
+  - Inviting general discussions, collaborations, or non-commercial contributions.
+  - Invitations to participate in unpaid projects, community initiatives, or open-source collaborations.
+  - Posts inviting general discussions, collaboration, or feedback without offering a paid opportunity.
+  - Promoting tools, research, or volunteer opportunities without financial compensation.
+
+Special Instructions:
+- Posts where the author is seeking a job or project opportunity (e.g., "I am looking for a role as...") must always be classified as "other."
+- Posts where the author is promoting their own services (e.g., "I am open to projects in X") should always be classified as "other."
+- Posts inviting unpaid contributions or volunteer work (e.g., "participate in our research project" or "help build a community database") should always be classified as "other."
+- Posts describing community-driven or open-source projects should be classified as "other."
+- Posts inviting conversations, collaboration, or feedback without mentioning a paid opportunity should also be classified as "other."
+- Posts mentioning "starting a project" without offering roles or paid opportunities should be classified as "other."
+- Posts celebrating personal or team milestones should also be classified as "other."
+- Avoid classifying any post as "job_posting" or "contract_project" unless there is a clear invitation for hiring or paid engagement.
+- Focus on identifying explicit invitations for hiring or contract work. Avoid classifying posts as "job_posting" or "contract_project" unless they meet the criteria exactly.
+
+
+Example:
+
+Input:
+[
+  {
+      "key": 0,
+      "text": "We're hiring a software engineer to join our team in San Francisco. Apply now!"
+  },
+  {
+      "key": 1,
+      "text": "Looking for a freelancer to help with a short-term mobile app development project. Remote work."
+  },
+  {
+      "key": 2,
+      "text": "Excited to share my thoughts on leadership in the tech industry."
+  }
+]
+
+
+Output:
+{
+  "result": [
+      {
+          "key": 0,
+          "post_type": "job_posting"
+      },
+      {
+          "key": 1,
+          "post_type": "contract_project"
+      },
+      {
+          "key": 2,
+          "post_type": "other"
+      }
+  ]
+}
+
+
+Task:
+
+Please classify the following posts and return the Output JSON:
+`;
+
 function bilbil_log(...args) {
   const content = args
     .map((it) => (typeof it === "string" ? it : it.toString()))
@@ -86,7 +165,7 @@ ${conversation}`,
   }
 }
 
-async function prompt_ai(api_key, data) {
+async function classifier(api_key, promptStr, data) {
   if (!data.length) return [];
 
   const MAX_TOKENS = 128_000;
@@ -97,85 +176,6 @@ async function prompt_ai(api_key, data) {
   }));
 
   if (!api_key) return new Promise((s, f) => f("api_key"));
-
-  const promptStr = `
-You are a classifier analyzing LinkedIn posts to categorize them into specific types. Your goal is to classify each post as either:
-
-1. "job_posting": Posts explicitly advertising job openings. These posts include:
-  - Keywords such as "hiring," "position available," "we’re looking for," or "apply now."
-  - Include specific job roles, locations, qualifications, or application instructions.
-
-2. "contract_project": Posts explicitly offering freelance, consulting, or contract-based opportunities. These posts include:
-  - Keywords like "freelance," "short-term project," "contract opportunity," or "remote work."
-  - A clear offer to engage in a paid, task-specific arrangement.
-
-3. "other": Posts that do not meet the above criteria, even if they mention projects, collaborations, or teamwork. Examples of "other" include:
-  - Authors seeking jobs or projects (e.g., "I am looking for a role in...").
-  - Personal or team updates, such as starting, working on, or completing a project.
-  - Personal updates or experiences.
-  - Sharing professional frustrations or challenges.
-  - Posts sharing tools, tutorials, or non-commercial initiatives.
-  - General discussions about technology, achievements, or learning experiences.
-  - Advertising the author’s own skills or services without offering a role or opportunity.
-  - Inviting general discussions, collaborations, or non-commercial contributions.
-  - Invitations to participate in unpaid projects, community initiatives, or open-source collaborations.
-  - Posts inviting general discussions, collaboration, or feedback without offering a paid opportunity.
-  - Promoting tools, research, or volunteer opportunities without financial compensation.
-
-Special Instructions:
-- Posts where the author is seeking a job or project opportunity (e.g., "I am looking for a role as...") must always be classified as "other."
-- Posts where the author is promoting their own services (e.g., "I am open to projects in X") should always be classified as "other."
-- Posts inviting unpaid contributions or volunteer work (e.g., "participate in our research project" or "help build a community database") should always be classified as "other."
-- Posts describing community-driven or open-source projects should be classified as "other."
-- Posts inviting conversations, collaboration, or feedback without mentioning a paid opportunity should also be classified as "other."
-- Posts mentioning "starting a project" without offering roles or paid opportunities should be classified as "other."
-- Posts celebrating personal or team milestones should also be classified as "other."
-- Avoid classifying any post as "job_posting" or "contract_project" unless there is a clear invitation for hiring or paid engagement.
-- Focus on identifying explicit invitations for hiring or contract work. Avoid classifying posts as "job_posting" or "contract_project" unless they meet the criteria exactly.
-
-
-Example:
-
-Input:
-[
-  {
-      "key": 0,
-      "text": "We're hiring a software engineer to join our team in San Francisco. Apply now!"
-  },
-  {
-      "key": 1,
-      "text": "Looking for a freelancer to help with a short-term mobile app development project. Remote work."
-  },
-  {
-      "key": 2,
-      "text": "Excited to share my thoughts on leadership in the tech industry."
-  }
-]
-
-
-Output:
-{
-  "result": [
-      {
-          "key": 0,
-          "post_type": "job_posting"
-      },
-      {
-          "key": 1,
-          "post_type": "contract_project"
-      },
-      {
-          "key": 2,
-          "post_type": "other"
-      }
-  ]
-}
-
-
-Task:
-
-Please classify the following posts and return the Output JSON:
-`;
 
   let agg = [];
   let chunks = [];
@@ -281,7 +281,7 @@ async function delay(ms) {
   });
 }
 
-async function helper_prompt_ai() {
+async function helper_classifier(promptStr) {
   bilbil_log("asking ai");
 
   try {
@@ -290,7 +290,11 @@ async function helper_prompt_ai() {
 
     bilbil_log("items: ", forAi.length);
 
-    const r = await prompt_ai(localStorage.getItem("bilbil_api_key"), forAi);
+    const r = await classifier(
+      localStorage.getItem("bilbil_api_key"),
+      promptStr,
+      forAi
+    );
 
     bilbil_log("got response");
 

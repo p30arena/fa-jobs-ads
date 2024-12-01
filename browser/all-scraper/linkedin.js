@@ -172,7 +172,7 @@
 
           localStorage.setItem("bilbil_data", JSON.stringify(all));
 
-          await helper_prompt_ai();
+          await helper_classifier(PROMPT_CLASSIFIER_JOBS_1);
         } else {
           bilbil_log("empty 2");
         }
@@ -470,7 +470,7 @@
     resolveAlertBtnElement.addEventListener("click", bilbil_resolveAlert_click);
 
     window.bilbil_ai_click = (ev) => {
-      helper_prompt_ai();
+      helper_classifier(PROMPT_CLASSIFIER_JOBS_1);
     };
     const aiBtnElement = document.createElement("li");
     aiBtnElement.id = "bilbil_ai";
