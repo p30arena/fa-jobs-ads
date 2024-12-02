@@ -515,6 +515,7 @@
 
         const shouldInject = confirm("Inject Script?");
         if (shouldInject) {
+          setExtensionWindow();
           setMainBotChat();
           inject();
         }

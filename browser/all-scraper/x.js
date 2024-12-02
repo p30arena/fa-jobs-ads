@@ -277,6 +277,9 @@
     shouldScrape = true;
   } else {
     shouldScrape = confirm("Should I Begin Scraping?");
+    if (shouldScrape) {
+      setExtensionWindow();
+    }
   }
 
   if (shouldScrape) {

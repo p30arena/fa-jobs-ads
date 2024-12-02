@@ -464,3 +464,9 @@ function checkIdleAndActivateTab() {
     }
   );
 }
+
+function setExtensionWindow() {
+  chrome.runtime.sendMessage({ action: "set_window_id" }, (response) => {
+    // console.log(response);
+  });
+}

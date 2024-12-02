@@ -4,6 +4,9 @@ const linkedinTabKey = (tabId) => "linkedin_" + tabId;
 const xTabKey = (tabId) => "x_" + tabId;
 let x_loop = new Map();
 
+let currentWindowId = null;
+let injectWindowId = null;
+
 function cleanup(tabId) {
   if (execTabs.has(linkedinTabKey(tabId))) {
     execTabs.delete(linkedinTabKey(tabId));
@@ -31,9 +34,6 @@ chrome.webNavigation.onCommitted.addListener(
   { url: [{ hostSuffix: "linkedin.com" }, { hostSuffix: "x.com" }] }
 );
 
-// Initialize a variable to track the current window ID
-let currentWindowId = null;
-
 // Function to update the current window ID when focus changes
 function updateCurrentWindowId(windowId) {
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
@@ -59,7 +59,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 
   // Ensure the tab belongs to the current focused window
-  if (currentWindowId === null || tab.windowId !== currentWindowId) {
+  if (
+    currentWindowId === null ||
+    (injectWindowId && tab.windowId !== injectWindowId)
+  ) {
     return;
   }
 
@@ -187,6 +190,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (execTabs.has(xTabKey(sender.tab.id))) {
         execTabs.delete(xTabKey(sender.tab.id));
       }
+    }
+  }
+
+  if (message.action === "set_window_id") {
+    if (sender?.tab?.id) {
+      injectWindowId = sender.tab.windowId;
     }
   }
 
