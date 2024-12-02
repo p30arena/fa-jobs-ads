@@ -295,13 +295,14 @@ async function delay(ms) {
 }
 
 async function helper_classifier(promptStr) {
-  bilbil_log("asking ai");
-
   try {
     const all = JSON.parse(localStorage.getItem("bilbil_data"));
     const forAi = all.filter((it) => !it.ai);
 
-    bilbil_log("items: ", forAi.length);
+    bilbil_log("AI, items: ", forAi.length).bot();
+    if (!forAi.length) {
+      return;
+    }
 
     const r = await classifier(
       localStorage.getItem("bilbil_api_key"),
