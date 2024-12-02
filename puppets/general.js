@@ -349,7 +349,8 @@ async function helper_classifier(promptStr) {
 لینک: ${it.url}
 زمان: ${it.time.toLocaleString("fa")}
 نویسنده: ${it.profile_link}
-متن: ${it.text}
+متن:
+${it.text}
 `
       ).bot();
     }

@@ -91,7 +91,8 @@
                       : $_profile),
                   text: it
                     .querySelector("div.update-components-text")
-                    ?.textContent?.trim(),
+                    ?.textContent?.trim()
+                    ?.replaceAll("hashtag#", "#"),
                 }))
                 .filter(
                   (it) => it.profile_link && it.text && it.time && it.urn
