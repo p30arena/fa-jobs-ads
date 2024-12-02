@@ -79,6 +79,11 @@ Task:
 Please classify the following posts and return the Output JSON:
 `;
 
+let _log_prefix;
+function bilbil_prefix_log(prefix) {
+  _log_prefix = prefix;
+}
+
 function bilbil_log(...args) {
   const content = args
     .map((it) => (typeof it === "string" ? it : it.toString()))
@@ -97,13 +102,17 @@ function bilbil_log(...args) {
 
   statusElement.appendChild(item);
 
-  sendMessageToBot(content);
-
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
+
+  return {
+    bot: sendMessageToBot(
+      _log_prefix ? `[${_log_prefix}]\n${content}` : content
+    ),
+  };
 }
 
 function bilbil_error(...args) {
-  bilbil_log(...args);
+  return bilbil_log(...args);
 }
 
 function bilbil_clear() {

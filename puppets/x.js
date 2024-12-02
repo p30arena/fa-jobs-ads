@@ -50,7 +50,7 @@
     }
   }
 
-  async function search(terms) {
+  async function search(terms, MAX_DEPTH = 10) {
     let selected_term;
     let terms_head_idx = localStorage.getItem("bilbil_search_items_head_idx");
 
@@ -83,7 +83,6 @@
 
     await delay(1000);
 
-    const MAX_DEPTH = 10;
     let page = 1;
     let agg = [];
 
@@ -161,6 +160,7 @@
     }
 
     try {
+      let lastRunLessThanDay = false;
       let terms_head_idx = localStorage.getItem("bilbil_search_items_head_idx");
 
       if (terms_head_idx) {
@@ -174,7 +174,6 @@
 
         updateAlert();
 
-        let lastRunLessThanDay = false;
         let lastRun = localStorage.getItem("bilbil_last_run");
         if (lastRun) {
           lastRun = new Date(lastRun);
@@ -192,7 +191,7 @@
 
       await bilbil_bringToFront();
 
-      while (await search(terms)) {
+      while (await search(terms, lastRunLessThanDay ? 3 : 10)) {
         await delay(1000);
       }
 
@@ -257,6 +256,8 @@
   //     resetSearch();
   //   }
   // }
+
+  bilbil_prefix_log("X");
 
   let statusElement = document.createElement("div");
   window.statusElement = statusElement;

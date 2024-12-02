@@ -21,7 +21,7 @@
     let agg = [];
 
     for (const search of terms) {
-      bilbil_log("keyword: ", search);
+      bilbil_log("keyword: ", search).bot();
       let promiseFinalized = false;
       try {
         const p = new Promise(async (promiseSuccess, promiseFailure) => {
@@ -62,7 +62,7 @@
                   }
                 }
               } catch (e) {
-                bilbil_error(e);
+                bilbil_error(e).bot();
               }
 
               const extracted = [
@@ -120,16 +120,16 @@
 
         const data = await p;
         agg = [...agg, ...data];
-        bilbil_log("result length: ", data.length);
+        bilbil_log("result length: ", data.length).bot();
       } catch (e) {
-        bilbil_error(e);
+        bilbil_error(e).bot();
       } finally {
         promiseFinalized = true;
       }
     }
 
     try {
-      bilbil_log("search done");
+      bilbil_log("search done").bot();
       bilbil_clear();
 
       if (agg.length) {
@@ -141,7 +141,7 @@
 
         if (agg.length) {
           // bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
-          bilbil_log("length: ", agg.length);
+          bilbil_log("length: ", agg.length).bot();
 
           const MAX_ENTRIES = 500;
 
@@ -175,26 +175,26 @@
 
           await helper_classifier(PROMPT_CLASSIFIER_JOBS_1);
         } else {
-          bilbil_log("empty 2");
+          bilbil_log("empty after filter").bot();
         }
       } else {
-        bilbil_log("empty 1");
+        bilbil_log("empty before filter").bot();
       }
     } catch (e) {
-      bilbil_error(e);
+      bilbil_error(e).bot();
     }
   }
 
   async function search_loop() {
     let terms = localStorage.getItem("bilbil_search_items");
     if (!terms) {
-      return bilbil_error("you have to specify bilbil_search_items");
+      return bilbil_error("you have to specify bilbil_search_items").bot();
     }
 
     terms = JSON.parse(terms);
 
     if (!terms.length) {
-      return bilbil_error("you have to specify bilbil_search_items");
+      return bilbil_error("you have to specify bilbil_search_items").bot();
     }
 
     try {
@@ -203,7 +203,7 @@
         ((tmp_run_delay = localStorage.getItem("bilbil_run_delay")),
         tmp_run_delay ? Number(tmp_run_delay) : null) ?? 300_000;
 
-      bilbil_log("run_delay: ", RUN_DELAY);
+      bilbil_log("run_delay: ", RUN_DELAY).bot();
 
       document.body.setAttribute("bilbil_loop_running", "true");
 
@@ -231,7 +231,7 @@
       search_loop();
     } catch (e) {
       document.body.setAttribute("bilbil_loop_running", "false");
-      bilbil_error(e);
+      bilbil_error(e).bot();
     }
   }
 
@@ -509,6 +509,7 @@
       if (!document.body.hasAttribute("bilbil_obs")) {
         document.body.setAttribute("bilbil_obs", "true");
 
+        bilbil_prefix_log("Linkedin");
         setMainBotChat();
         inject();
       }
