@@ -67,11 +67,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates the response will be sent asynchronously
   }
 
+  if (message.action === "disableAutoDiscardable") {
+    if (sender?.tab?.id) {
+      chrome.tabs.update(sender.tab.id, { autoDiscardable: false }, () => {
+        if (chrome.runtime.lastError) {
+          sendResponse({
+            status: "error",
+            message: chrome.runtime.lastError.message,
+          });
+        } else {
+          sendResponse({ status: "success", tabId: sender.tab.id });
+        }
+      });
+      return true; // Indicates async response.
+    } else {
+      sendResponse({ status: "tab undefined", sender });
+      return false;
+    }
+  }
+
   if (message.action === "x_loop") {
     x_loop = true;
   }
 
   if (message.action === "x_loop_end") {
     x_loop = false;
+  }
+
+  if (message.action === "x_loop") {
+    x_loop = true;
   }
 });

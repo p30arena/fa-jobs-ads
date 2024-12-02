@@ -412,14 +412,20 @@ async function sendMessageToBot(message) {
     new Date().toISOString(),
     fetch(
       `https://api.telegram.org/bot${tbot}/sendMessage?chat_id=${mainChatId}&text=${message}`
-    ).then((response) => console.log(response))
+    ) //.then((response) => console.log(response))
   );
 }
 
 function keepAlive() {
   try {
+    chrome.runtime.sendMessage(
+      { action: "disableAutoDiscardable" },
+      (response) => {
+        // console.log(response);
+      }
+    );
+
     chrome.runtime.sendMessage({ action: "delay", ms: 10_000 }, (response) => {
-      // bilbil_log("keepAlive");
       keepAlive();
     });
 
