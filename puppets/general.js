@@ -105,9 +105,8 @@ function bilbil_log(...args) {
   setTimeout(() => statusElement.scrollTo(0, statusElement.scrollHeight), 0);
 
   return {
-    bot: sendMessageToBot(
-      _log_prefix ? `[${_log_prefix}]\n${content}` : content
-    ),
+    bot: () =>
+      sendMessageToBot(_log_prefix ? `[${_log_prefix}]\n${content}` : content),
   };
 }
 
@@ -322,6 +321,7 @@ async function helper_classifier(promptStr) {
     }
 
     localStorage.setItem("bilbil_data", JSON.stringify(all));
+    // TODO: why don't we just use filtered.length?!
     localStorage.setItem(
       "bilbil_cnt_not_other",
       all.reduce(
@@ -337,6 +337,22 @@ async function helper_classifier(promptStr) {
 
     bilbil_log("\n\n\n---------------------------------\n\n\n");
     bilbil_log(filtered.map((it) => JSON.stringify(it)).join("\n"));
+    for (const it of filtered) {
+      bilbil_log(
+        `
+آگهی: ${
+          {
+            job_posting: "استخدام",
+            contract_project: "پروژه",
+          }[it.ai.post_type]
+        }
+لینک: ${it.url}
+زمان: ${it.time.toLocaleString("fa")}
+نویسنده: ${it.profile_link}
+متن: ${it.text}
+`
+      ).bot();
+    }
   } catch (e) {
     if (e === "api_key") {
       bilbil_error("must define api_key");

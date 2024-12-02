@@ -79,6 +79,8 @@
       return true;
     }
 
+    bilbil_log("keyword: ", selected_term).bot();
+
     localStorage.setItem("bilbil_search_items_head_idx", terms_head_idx + 1);
 
     await delay(1000);
@@ -114,7 +116,7 @@
       }
     }
 
-    bilbil_log("length: ", agg.length);
+    bilbil_log("length: ", agg.length).bot();
 
     let prev = localStorage.getItem("bilbil_data");
     if (prev) {
@@ -146,17 +148,17 @@
       ((tmp_run_delay = localStorage.getItem("bilbil_run_delay")),
       tmp_run_delay ? Number(tmp_run_delay) : null) ?? 300_000;
 
-    bilbil_log("run_delay: ", RUN_DELAY);
+    bilbil_log("run_delay: ", RUN_DELAY).bot();
 
     let terms = localStorage.getItem("bilbil_search_items");
     if (!terms) {
-      return bilbil_error("you have to specify bilbil_search_items");
+      return bilbil_error("you have to specify bilbil_search_items").bot();
     }
 
     terms = JSON.parse(terms);
 
     if (!terms.length) {
-      return bilbil_error("you have to specify bilbil_search_items");
+      return bilbil_error("you have to specify bilbil_search_items").bot();
     }
 
     try {
@@ -204,7 +206,7 @@
       let data = localStorage.getItem("bilbil_data");
       if (data) {
         data = JSON.parse(data);
-        bilbil_log("DB Total: ", data.length);
+        bilbil_log("DB Total: ", data.length).bot();
       }
 
       await delay(RUN_DELAY);
@@ -212,7 +214,7 @@
       search_loop();
     } catch (e) {
       document.body.setAttribute("bilbil_loop_running", "false");
-      bilbil_error(e);
+      bilbil_error(e).bot();
     }
   }
 
@@ -258,6 +260,7 @@
   // }
 
   bilbil_prefix_log("X");
+  setMainBotChat();
 
   let statusElement = document.createElement("div");
   window.statusElement = statusElement;
