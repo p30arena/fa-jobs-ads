@@ -7,9 +7,10 @@ async function intercept(page, { injectScripts }) {
 
   // Intercept and modify response headers
   page.on("request", (request) => {
+    const url = request.url();
     const resourceType = request.resourceType();
-    // if (["image", "media", "font"].includes(resourceType)) {
-    if (["media"].includes(resourceType)) {
+    // if (["image", "media", "font"].includes(resourceType) || url.startsWith("blob:")) {
+    if (["media"].includes(resourceType) || url.startsWith("blob:")) {
       //   console.log(`Blocking ${resourceType}:`, request.url());
       request.abort(); // Block the request
     } else {
@@ -75,6 +76,27 @@ async function injectBilBilFetch(page) {
   });
 }
 
+async function injectBilBilBringToFront(page) {
+  const isExposed = await page.evaluate(() =>
+    Boolean(window.bilbil_bringToFront)
+  );
+  if (isExposed) return;
+
+  await page.exposeFunction("bilbil_bringToFront", async () => {
+    try {
+      await page.bringToFront();
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+}
+
+async function injectCommons(page) {
+  await injectBilBilFetch(page);
+  await injectBilBilBringToFront(page);
+}
+
 async function injectScripts(page, scripts) {
   const isExposed = await page.evaluate(() => Boolean(window.bilbil));
   if (isExposed) return;
@@ -113,7 +135,7 @@ async function injectScripts(page, scripts) {
   const linkedinPage = await browser.newPage();
   await intercept(linkedinPage, {
     injectScripts: async (page) => {
-      await injectBilBilFetch(page);
+      await injectCommons(page);
       await injectScripts(page, [generalScript, linkedinScript]);
     },
   });
@@ -132,7 +154,7 @@ async function injectScripts(page, scripts) {
   const X_Page = await browser.newPage();
   await intercept(X_Page, {
     injectScripts: async (page) => {
-      await injectBilBilFetch(page);
+      await injectCommons(page);
       await injectScripts(page, [generalScript, X_Script]);
     },
   });

@@ -72,7 +72,8 @@
                   // urn: Number(
                   //   it.getAttribute("data-urn").replace("urn:li:activity:", "")
                   // ),
-                  urn: it.getAttribute("data-urn"),
+                  urn: ($_lpvar_urn = it.getAttribute("data-urn")),
+                  url: `https://www.linkedin.com/feed/update/${$_lpvar_urn}/`,
                   time: parseTimeAgo(
                     it
                       .querySelector(

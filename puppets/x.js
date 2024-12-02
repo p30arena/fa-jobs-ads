@@ -190,6 +190,8 @@
 
       await delay(1000);
 
+      await bilbil_bringToFront();
+
       while (await search(terms)) {
         await delay(1000);
       }
