@@ -221,7 +221,7 @@
         }
       }
 
-      checkIdleAndActivateTab();
+      activateTab();
       await search(terms, lastRunLessThanDay ? 3 : 10);
 
       localStorage.setItem("bilbil_last_run", new Date().toISOString());

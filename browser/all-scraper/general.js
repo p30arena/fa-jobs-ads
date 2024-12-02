@@ -391,6 +391,7 @@ function setMainBotChat() {
 }
 
 let _bot_queue = new Map();
+let _bot_lock = false;
 
 async function sendMessageToBot(message) {
   const tbot = localStorage.getItem("bilbil_tbot");
@@ -399,21 +400,34 @@ async function sendMessageToBot(message) {
   const mainChatId = localStorage.getItem("bilbil_mainChatId");
   if (!mainChatId) return;
 
-  const keysToRemove = [];
-  for (const [k, v] of _bot_queue.entries()) {
-    await v.finally((_) => keysToRemove.push(k));
+  while (_bot_lock) {
+    await delay(1000);
   }
 
-  for (const k of keysToRemove) {
-    _bot_queue.delete(k);
+  _bot_lock = true;
+
+  try {
+    const maxMessageLength = 4096;
+    const parts = [];
+    let start = 0;
+
+    while (start < message.length) {
+      parts.push(message.slice(start, start + maxMessageLength));
+      start += maxMessageLength;
+    }
+
+    for (const part of parts) {
+      await fetch(
+        `https://api.telegram.org/bot${tbot}/sendMessage?chat_id=${mainChatId}&text=${encodeURIComponent(
+          part
+        )}`
+      );
+    }
+  } catch (e) {
+    bilbil_error(e);
   }
 
-  _bot_queue.set(
-    new Date().toISOString(),
-    fetch(
-      `https://api.telegram.org/bot${tbot}/sendMessage?chat_id=${mainChatId}&text=${message}`
-    ) //.then((response) => console.log(response))
-  );
+  _bot_lock = false;
 }
 
 function keepAlive() {
@@ -443,12 +457,10 @@ function activateTab() {
 }
 
 function checkIdleAndActivateTab() {
-  const idleThresholdInSeconds = 60;
-  chrome.idle.queryState(idleThresholdInSeconds, (state) => {
-    if (state === "idle" || state === "locked") {
-      activateTab();
-    } else {
-      console.log("Browser is active. No action taken.");
+  chrome.runtime.sendMessage(
+    { action: "checkIdleAndActivateTab" },
+    (response) => {
+      // console.log(response);
     }
-  });
+  );
 }

@@ -31,12 +31,39 @@ chrome.webNavigation.onCommitted.addListener(
   { url: [{ hostSuffix: "linkedin.com" }, { hostSuffix: "x.com" }] }
 );
 
+// Initialize a variable to track the current window ID
+let currentWindowId = null;
+
+// Function to update the current window ID when focus changes
+function updateCurrentWindowId(windowId) {
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    // No window is focused (e.g., the browser is minimized)
+    currentWindowId = null;
+  } else {
+    currentWindowId = windowId;
+  }
+}
+
+// Track window focus changes
+chrome.windows.onFocusChanged.addListener(updateCurrentWindowId);
+
+// Initialize the current window ID when the extension is loaded
+chrome.windows.getCurrent({ populate: false }, (currentWindow) => {
+  currentWindowId = currentWindow.id;
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (
-    tab.active &&
-    tab.status == "complete" &&
-    tab.url.includes("linkedin.com")
-  ) {
+  // Skip unnecessary updates
+  if (!changeInfo.status || changeInfo.status !== "complete" || !tab.url) {
+    return;
+  }
+
+  // Ensure the tab belongs to the current focused window
+  if (currentWindowId === null || tab.windowId !== currentWindowId) {
+    return;
+  }
+
+  if (tab.url.includes("linkedin.com/notifications")) {
     if (!execTabs.has(linkedinTabKey(tabId))) {
       execTabs.add(linkedinTabKey(tabId));
       chrome.scripting.executeScript({
@@ -47,11 +74,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 
   if (
-    tab.active &&
-    tab.status == "complete" &&
-    (x_loop.has(tabId)
+    x_loop.has(tabId)
       ? tab.url.includes("/x.com/search")
-      : tab.url.includes("/x.com/notifications"))
+      : tab.url.includes("/x.com/notifications")
   ) {
     if (!execTabs.has(xTabKey(tabId))) {
       execTabs.add(xTabKey(tabId));
@@ -93,7 +118,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "activateTab") {
     if (sender?.tab?.id) {
-      // The browser is idle or locked, activate the target tab
       chrome.tabs.update(
         sender.tab.id,
         { active: true, highlighted: true },
@@ -108,6 +132,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
         }
       );
+      return true;
+    } else {
+      sendResponse({ status: "tab undefined", sender });
+      return false;
+    }
+  }
+
+  if (message.action === "checkIdleAndActivateTab") {
+    if (sender?.tab?.id) {
+      const idleThresholdInSeconds = 60;
+      chrome.idle.queryState(idleThresholdInSeconds, (state) => {
+        if (state === "idle" || state === "locked") {
+          // The browser is idle or locked, activate the target tab
+          chrome.tabs.update(
+            sender.tab.id,
+            { active: true, highlighted: true },
+            () => {
+              if (chrome.runtime.lastError) {
+                sendResponse({
+                  status: "error",
+                  message: chrome.runtime.lastError.message,
+                });
+              } else {
+                sendResponse({ status: "success", tabId: sender.tab.id });
+              }
+            }
+          );
+        } else {
+          console.log("Browser is active. No action taken.");
+        }
+      });
+      return true;
     } else {
       sendResponse({ status: "tab undefined", sender });
       return false;
