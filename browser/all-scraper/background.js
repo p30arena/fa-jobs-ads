@@ -138,6 +138,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
           } else {
             sendResponse({ status: "success", tabId: sender.tab.id });
+
+            // Focus the window containing the tab
+            chrome.windows.update(
+              sender.tab.windowId,
+              { focused: true },
+              () => {
+                // nop
+              }
+            );
           }
         }
       );
@@ -165,6 +174,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
               } else {
                 sendResponse({ status: "success", tabId: sender.tab.id });
+
+                // Focus the window containing the tab
+                chrome.windows.update(
+                  sender.tab.windowId,
+                  { focused: true },
+                  () => {
+                    // nop
+                  }
+                );
               }
             }
           );

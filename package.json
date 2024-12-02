@@ -11,6 +11,7 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "openai": "^4.73.1",
+    "puppeteer-core": "^23.9.0",
     "zod": "^3.23.8"
   }
 }
