@@ -47,6 +47,12 @@ function updateCurrentWindowId(windowId) {
 // Track window focus changes
 chrome.windows.onFocusChanged.addListener(updateCurrentWindowId);
 
+chrome.windows.onRemoved.addListener((windowId) => {
+  if (injectWindowId === windowId) {
+    injectWindowId = null;
+  }
+});
+
 // Initialize the current window ID when the extension is loaded
 chrome.windows.getCurrent({ populate: false }, (currentWindow) => {
   currentWindowId = currentWindow.id;
