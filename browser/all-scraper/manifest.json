@@ -3,7 +3,14 @@
   "name": "All Scraper",
   "version": "1.0",
   "description": "Executes a function on page load for a specific URL",
-  "permissions": ["alarms", "activeTab", "tabs", "scripting"],
+  "permissions": [
+    "alarms",
+    "activeTab",
+    "tabs",
+    "scripting",
+    "idle",
+    "webNavigation"
+  ],
   "host_permissions": ["https://*.linkedin.com/*", "https://*.x.com/*"],
   "background": {
     "service_worker": "background.js"

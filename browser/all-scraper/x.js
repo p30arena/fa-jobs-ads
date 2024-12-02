@@ -30,6 +30,26 @@
       }));
   };
 
+  async function progressWaiter() {
+    const MAX_WAIT_PROGRESS = 15;
+    let n_wait_progress = 0;
+
+    while (progressbar() && n_wait_progress++ < MAX_WAIT_PROGRESS) {
+      await delay(1000);
+    }
+
+    if (progressbar()) {
+      return true;
+    }
+
+    await delay(1000);
+
+    if (retry_btn()) {
+      bilbil_log("retry_btn");
+      return true;
+    }
+  }
+
   async function search(terms) {
     let selected_term;
     let terms_head_idx = localStorage.getItem("bilbil_search_items_head_idx");
@@ -61,26 +81,10 @@
 
     localStorage.setItem("bilbil_search_items_head_idx", terms_head_idx + 1);
 
-    async function progressWaiter() {
-      let n_wait_progress = 0;
-      while (progressbar() && n_wait_progress++ < MAX_WAIT_PROGRESS) {
-        await delay(1000);
-      }
-
-      if (progressbar()) {
-        return true;
-      }
-
-      await delay(1000);
-
-      if (retry_btn()) {
-        bilbil_log("retry_btn");
-        return true;
-      }
-    }
+    activateTab();
+    await delay(1000);
 
     const MAX_DEPTH = 10;
-    const MAX_WAIT_PROGRESS = 15;
     let page = 1;
     let agg = [];
 
@@ -226,6 +230,22 @@
     }
   }
 
+  function askReset() {
+    if (document.location.href.includes("/search")) {
+      return false;
+    }
+
+    return (
+      localStorage.getItem("bilbil_last_run") ||
+      localStorage.getItem("bilbil_search_items_head_idx")
+    );
+  }
+
+  function resetSearch() {
+    localStorage.removeItem("bilbil_last_run");
+    localStorage.removeItem("bilbil_search_items_head_idx");
+  }
+
   const getLogo = () => document.querySelector('a[aria-label="X"]');
 
   while (!getLogo()) {
@@ -235,6 +255,13 @@
   if (searchContainer()) {
     while (progressbar()) {
       await delay(1000);
+    }
+  }
+
+  if (askReset()) {
+    const doReset = confirm("Do you want to reset the search?");
+    if (doReset) {
+      resetSearch();
     }
   }
 

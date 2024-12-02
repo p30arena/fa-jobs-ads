@@ -435,3 +435,20 @@ function keepAlive() {
     bilbil_error(e);
   }
 }
+
+function activateTab() {
+  chrome.runtime.sendMessage({ action: "activateTab" }, (response) => {
+    // console.log(response);
+  });
+}
+
+function checkIdleAndActivateTab() {
+  const idleThresholdInSeconds = 60;
+  chrome.idle.queryState(idleThresholdInSeconds, (state) => {
+    if (state === "idle" || state === "locked") {
+      activateTab();
+    } else {
+      console.log("Browser is active. No action taken.");
+    }
+  });
+}
