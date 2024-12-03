@@ -1,6 +1,14 @@
 const fs = require("fs").promises; // For reading the script file
 const puppeteer = require("puppeteer-core");
 
+async function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+}
+
 async function intercept(page, { injectScripts }) {
   await page.evaluateOnNewDocument(() => {
     Object.defineProperty(document, "visibilityState", {
@@ -102,7 +110,28 @@ async function injectBilBilBringToFront(page) {
   });
 }
 
+const locks = new Map();
+async function injectLock(page) {
+  const isExposed = await page.evaluate(
+    () => Boolean(window.bilbil_lock) || Boolean(window.bilbil_release_lock)
+  );
+  if (isExposed) return;
+
+  await page.exposeFunction("bilbil_lock", async (name) => {
+    while (locks.get(name)) {
+      await delay(1000);
+    }
+
+    locks.set(name, true);
+  });
+
+  await page.exposeFunction("bilbil_release_lock", async (name) => {
+    locks.set(name, false);
+  });
+}
+
 async function injectCommons(page) {
+  await injectLock(page);
   await injectBilBilFetch(page);
   await injectBilBilBringToFront(page);
 }

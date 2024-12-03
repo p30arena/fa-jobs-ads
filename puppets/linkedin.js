@@ -223,7 +223,15 @@
         }
       }
 
-      await search(terms, lastRunLessThanDay ? 3 : 10);
+      try {
+        await bilbil_lock("front");
+
+        await bilbil_bringToFront();
+
+        await search(terms, lastRunLessThanDay ? 3 : 10);
+      } finally {
+        await bilbil_release_lock("front");
+      }
 
       localStorage.setItem("bilbil_last_run", new Date().toISOString());
 

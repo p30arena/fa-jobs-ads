@@ -4,9 +4,11 @@
   const searchContainer = () =>
     document.querySelector('div[aria-label="Timeline: Search timeline"]');
   const retry_btn = () =>
-    document.querySelector(
-      'div[aria-label="Timeline: Search timeline"] > div > div:last-child button[role="button"]:not([aria-label])'
-    );
+    document
+      .querySelector(
+        'div[aria-label="Timeline: Search timeline"] > div > div:last-child button[role="button"]:not([aria-label])'
+      )
+      ?.textContent?.trim() === "Retry";
 
   const extract = () => {
     return [
@@ -79,74 +81,81 @@
       return true;
     }
 
-    bilbil_log("keyword: ", selected_term).bot();
+    try {
+      await bilbil_lock("front");
 
-    localStorage.setItem("bilbil_search_items_head_idx", terms_head_idx + 1);
+      await bilbil_bringToFront();
 
-    await delay(1000);
+      bilbil_log("keyword: ", selected_term).bot();
 
-    let page = 1;
-    let agg = [];
+      localStorage.setItem("bilbil_search_items_head_idx", terms_head_idx + 1);
 
-    // let scrollTop = 0;
-    while (page++ < MAX_DEPTH) {
-      if (await progressWaiter()) {
-        break;
-      }
-
-      const data = extract();
-      if (!data.length) {
-        bilbil_log("!data.length");
-        break;
-      }
-
-      // if (scrollTop == document.body.scrollHeight) {
-      //   bilbil_log("scrollTop");
-      //   break;
-      // }
-
-      agg = [...agg, ...data];
-
-      window.scrollTo(0, document.body.scrollHeight);
-      // window.scrollBy(0, document.body.scrollHeight);
-      // document
-      //   .querySelector(
-      //     '[aria-label="Timeline: Search timeline"] > div > div:last-child'
-      //   )
-      //   .scrollIntoView();
-      // console.log(scrollTop, document.body.scrollHeight);
-      // scrollTop = document.body.scrollHeight;
       await delay(1000);
 
-      if (await progressWaiter()) {
-        break;
+      let page = 1;
+      let agg = [];
+
+      // let scrollTop = 0;
+      while (page++ < MAX_DEPTH) {
+        if (await progressWaiter()) {
+          break;
+        }
+
+        const data = extract();
+        if (!data.length) {
+          bilbil_log("!data.length");
+          break;
+        }
+
+        // if (scrollTop == document.body.scrollHeight) {
+        //   bilbil_log("scrollTop");
+        //   break;
+        // }
+
+        agg = [...agg, ...data];
+
+        window.scrollTo(0, document.body.scrollHeight);
+        // window.scrollBy(0, document.body.scrollHeight);
+        // document
+        //   .querySelector(
+        //     '[aria-label="Timeline: Search timeline"] > div > div:last-child'
+        //   )
+        //   .scrollIntoView();
+        // console.log(scrollTop, document.body.scrollHeight);
+        // scrollTop = document.body.scrollHeight;
+        await delay(1000);
+
+        if (await progressWaiter()) {
+          break;
+        }
       }
-    }
 
-    bilbil_log("length: ", agg.length).bot();
+      bilbil_log("length: ", agg.length).bot();
 
-    let prev = localStorage.getItem("bilbil_data");
-    if (prev) {
-      prev = JSON.parse(prev);
-      agg = [...prev, ...agg];
-    }
-
-    const linksUniq = new Map();
-    for (const item of agg) {
-      if (!linksUniq.has(item.links.post)) {
-        linksUniq.set(item.links.post, item);
+      let prev = localStorage.getItem("bilbil_data");
+      if (prev) {
+        prev = JSON.parse(prev);
+        agg = [...prev, ...agg];
       }
+
+      const linksUniq = new Map();
+      for (const item of agg) {
+        if (!linksUniq.has(item.links.post)) {
+          linksUniq.set(item.links.post, item);
+        }
+      }
+
+      agg = [...linksUniq.values()];
+
+      agg.sort((a, b) => a.time - b.time);
+
+      localStorage.setItem("bilbil_data", JSON.stringify(agg));
+
+      // bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
+      return true;
+    } finally {
+      await bilbil_release_lock("front");
     }
-
-    agg = [...linksUniq.values()];
-
-    agg.sort((a, b) => a.time - b.time);
-
-    localStorage.setItem("bilbil_data", JSON.stringify(agg));
-
-    // bilbil_log(agg.map((it) => JSON.stringify(it)).join("\n"));
-
-    return true;
   }
 
   async function search_loop() {
@@ -197,8 +206,6 @@
       }
 
       await delay(1000);
-
-      await bilbil_bringToFront();
 
       while (await search(terms, lastRunLessThanDay ? 3 : 10)) {
         await delay(1000);
