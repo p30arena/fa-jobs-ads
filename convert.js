@@ -4,7 +4,7 @@ const XLSX = require("xlsx");
 
 async function convertJsonlToXlsx(jsonlFilePath, xlsxFilePath) {
   try {
-    const uniqueKeys = new Set();
+    const columnData = {};
     const rows = [];
 
     // Read JSONL file line by line
@@ -16,12 +16,25 @@ async function convertJsonlToXlsx(jsonlFilePath, xlsxFilePath) {
         const json = JSON.parse(line);
         rows.push(json);
 
-        // Collect unique keys
-        Object.keys(json).forEach((key) => uniqueKeys.add(key));
+        // Track maximum length of data in each column
+        Object.entries(json).forEach(([key, value]) => {
+          const length = String(value || "").length;
+          if (!columnData[key]) {
+            columnData[key] = { maxLength: 0, occurrences: 0 };
+          }
+          columnData[key].maxLength = Math.max(
+            columnData[key].maxLength,
+            length
+          );
+          columnData[key].occurrences++;
+        });
       }
     }
 
-    const columns = Array.from(uniqueKeys); // Convert Set to Array
+    // Sort columns: shorter maxLength first, and lengthy ones last
+    const columns = Object.keys(columnData).sort((a, b) => {
+      return columnData[a].maxLength - columnData[b].maxLength;
+    });
 
     // Create Excel data array
     const excelData = [];
@@ -53,7 +66,7 @@ async function convertJsonlToXlsx(jsonlFilePath, xlsxFilePath) {
 
 async function convertJsonlToCsv(jsonlFilePath, csvFilePath) {
   try {
-    const uniqueKeys = new Set();
+    const columnData = {};
     const rows = [];
 
     // Read JSONL file line by line
@@ -65,12 +78,26 @@ async function convertJsonlToCsv(jsonlFilePath, csvFilePath) {
         const json = JSON.parse(line);
         rows.push(json);
 
-        // Collect unique keys
-        Object.keys(json).forEach((key) => uniqueKeys.add(key));
+        // Track maximum length of data in each column
+        Object.entries(json).forEach(([key, value]) => {
+          const length = String(value || "").length;
+          if (!columnData[key]) {
+            columnData[key] = { maxLength: 0, occurrences: 0 };
+          }
+          columnData[key].maxLength = Math.max(
+            columnData[key].maxLength,
+            length
+          );
+          columnData[key].occurrences++;
+        });
       }
     }
 
-    const columns = Array.from(uniqueKeys); // Convert Set to Array
+    // Sort columns: shorter maxLength first, and lengthy ones last
+    const columns = Object.keys(columnData).sort((a, b) => {
+      return columnData[a].maxLength - columnData[b].maxLength;
+    });
+
     const csvRows = [];
 
     // Add header row
@@ -92,3 +119,8 @@ async function convertJsonlToCsv(jsonlFilePath, csvFilePath) {
     console.error("Error during conversion:", error.message);
   }
 }
+
+module.exports = {
+  convertJsonlToCsv,
+  convertJsonlToXlsx,
+};
