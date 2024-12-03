@@ -2,7 +2,7 @@ const fs = require("fs");
 const readline = require("readline");
 const XLSX = require("xlsx");
 
-async function convertJsonlToXlsx(jsonlFilePath, xlsxFilePath) {
+async function convertJsonlToXlsx(jsonlFilePath, xlsxFilePath, parser, filter) {
   try {
     const columnData = {};
     const rows = [];
@@ -13,7 +13,15 @@ async function convertJsonlToXlsx(jsonlFilePath, xlsxFilePath) {
 
     for await (const line of rl) {
       if (line.trim()) {
-        const json = JSON.parse(line);
+        let json = JSON.parse(line);
+        if (parser) {
+          json = parser(json);
+        }
+        if (filter) {
+          if (!filter(json)) {
+            continue;
+          }
+        }
         rows.push(json);
 
         // Track maximum length of data in each column
@@ -64,7 +72,7 @@ async function convertJsonlToXlsx(jsonlFilePath, xlsxFilePath) {
   }
 }
 
-async function convertJsonlToCsv(jsonlFilePath, csvFilePath) {
+async function convertJsonlToCsv(jsonlFilePath, csvFilePath, parser, filter) {
   try {
     const columnData = {};
     const rows = [];
@@ -75,7 +83,15 @@ async function convertJsonlToCsv(jsonlFilePath, csvFilePath) {
 
     for await (const line of rl) {
       if (line.trim()) {
-        const json = JSON.parse(line);
+        let json = JSON.parse(line);
+        if (parser) {
+          json = parser(json);
+        }
+        if (filter) {
+          if (!filter(json)) {
+            continue;
+          }
+        }
         rows.push(json);
 
         // Track maximum length of data in each column
@@ -120,7 +136,26 @@ async function convertJsonlToCsv(jsonlFilePath, csvFilePath) {
   }
 }
 
+function googleParser(json) {
+  return {
+    title: json.site.title,
+    link: json.site.link,
+    page: json.link,
+    goftino: json?.discovery?.goftino,
+    instagram: json?.discovery?.instagram,
+    emails: json?.discovery?.emails,
+    mobiles: json?.discovery?.mobiles,
+    phones: json?.discovery?.phones,
+  };
+}
+
+function googleFilter(json) {
+  return json.instagram || json.mobiles?.length || json.emails?.length;
+}
+
 module.exports = {
   convertJsonlToCsv,
   convertJsonlToXlsx,
+  googleParser,
+  googleFilter,
 };

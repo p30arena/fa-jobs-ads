@@ -1,8 +1,4 @@
 const downloadHtml = async (link) => {
-  if (link.indexOf(" ›") > -1) {
-    link = link.split(" ")[0];
-  }
-
   try {
     let res = await fetch(link, {
       method: "GET",
@@ -26,14 +22,14 @@ const tools = {
       .value?.[3],
   findEmails: (html) =>
     Array.from(html.matchAll(/[\w._%+-]+@[\w.-]+\.[a-zA-Z]{2,}/g)).map(
-      (match) => match[0]
+      (match) => match[0].trim()
     ),
   findPhones: (html) =>
     Array.from(
       html.matchAll(
         /(?:\+?(\d{1,3})[-.\s]?|0)?(?:\(?(\d{2,4})\)?[-.\s]?)(\d{3,4}[-.\s]?\d{3,4})/g
       )
-    ).map((match) => match[0].replace(/[\-\s]/g, "")),
+    ).map((match) => match[0].trim().replace(/[\-\s]/g, "")),
 };
 
 async function discover(filePath) {
@@ -54,20 +50,27 @@ async function discover(filePath) {
       continue;
     }
 
+    if (item.site.link.indexOf(" ›") > -1) {
+      item.site.link = item.site.link.split(" ")[0];
+    }
+
     const html = await downloadHtml(item.site.link);
 
     if (!html) {
       continue;
     }
 
+    const siteUrl = new URL(item.site.link);
+    const topDomain = siteUrl.hostname.split(".").slice(-1)[0];
+
     const phones = tools
       .findPhones(html)
-      .filter((p) => p.length <= 14 && p.indexOf(".") == -1);
+      .filter((p) => p.length <= 14 && p.length > 2 && p.indexOf(".") == -1);
 
     item.discovery = {
       goftino: tools.hasGoftino(html),
       instagram: tools.findInstagram(html),
-      emails: tools.findEmails(html),
+      emails: tools.findEmails(html).filter((e) => e.endsWith(topDomain)),
       mobiles: phones.filter((p) => p.match(/^((\+?|0?)989\d{9}|0?9\d{9})$/)),
       phones: phones.filter((p) => !p.match(/^((\+?|0?)989\d{9}|0?9\d{9})$/)),
     };
