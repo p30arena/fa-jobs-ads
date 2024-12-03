@@ -1,4 +1,5 @@
 .DS_Store
+.wwebjs_cache
 user_data_dir
 
 # Logs
