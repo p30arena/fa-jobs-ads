@@ -24,6 +24,16 @@ const tools = {
   findInstagram: (html) =>
     html.matchAll(/(https:\/\/)?(www\.)?(instagram\.com\/[^'"]+)['"]/gm).next()
       .value?.[3],
+  findEmails: (html) =>
+    Array.from(html.matchAll(/[\w._%+-]+@[\w.-]+\.[a-zA-Z]{2,}/g)).map(
+      (match) => match[0]
+    ),
+  findPhones: (html) =>
+    Array.from(
+      html.matchAll(
+        /(?:\+?(\d{1,3})[-.\s]?|0)?(?:\(?(\d{2,4})\)?[-.\s]?)(\d{3,4}[-.\s]?\d{3,4})/g
+      )
+    ).map((match) => match[0].replace(/[\-\s]/g, "")),
 };
 
 async function discover(filePath) {
@@ -50,9 +60,16 @@ async function discover(filePath) {
       continue;
     }
 
+    const phones = tools
+      .findPhones(html)
+      .filter((p) => p.length <= 14 && p.indexOf(".") == -1);
+
     item.discovery = {
       goftino: tools.hasGoftino(html),
       instagram: tools.findInstagram(html),
+      emails: tools.findEmails(html),
+      mobiles: phones.filter((p) => p.match(/^((\+?|0?)989\d{9}|0?9\d{9})$/)),
+      phones: phones.filter((p) => !p.match(/^((\+?|0?)989\d{9}|0?9\d{9})$/)),
     };
   }
 
