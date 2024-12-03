@@ -88,7 +88,7 @@
     let page = 1;
     let agg = [];
 
-    let scrollTop = 0;
+    // let scrollTop = 0;
     while (page++ < MAX_DEPTH) {
       if (await progressWaiter()) {
         break;
@@ -100,15 +100,22 @@
         break;
       }
 
-      if (scrollTop == document.body.scrollHeight) {
-        bilbil_log("scrollTop");
-        break;
-      }
+      // if (scrollTop == document.body.scrollHeight) {
+      //   bilbil_log("scrollTop");
+      //   break;
+      // }
 
       agg = [...agg, ...data];
 
       window.scrollTo(0, document.body.scrollHeight);
-      scrollTop = document.body.scrollHeight;
+      // window.scrollBy(0, document.body.scrollHeight);
+      // document
+      //   .querySelector(
+      //     '[aria-label="Timeline: Search timeline"] > div > div:last-child'
+      //   )
+      //   .scrollIntoView();
+      // console.log(scrollTop, document.body.scrollHeight);
+      // scrollTop = document.body.scrollHeight;
       await delay(1000);
 
       if (await progressWaiter()) {

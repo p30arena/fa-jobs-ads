@@ -91,7 +91,7 @@
                       : $_profile),
                   text: it
                     .querySelector("div.update-components-text")
-                    ?.textContent?.trim()
+                    ?.innerText?.trim()
                     ?.replaceAll("hashtag#", "#"),
                 }))
                 .filter(

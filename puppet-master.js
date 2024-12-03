@@ -2,6 +2,16 @@ const fs = require("fs").promises; // For reading the script file
 const puppeteer = require("puppeteer-core");
 
 async function intercept(page, { injectScripts }) {
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(document, "visibilityState", {
+      get: () => "visible",
+    });
+    Object.defineProperty(document, "hidden", {
+      get: () => false,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+
   // Enable request interception
   await page.setRequestInterception(true);
 
